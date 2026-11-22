@@ -13,6 +13,9 @@ import memory.Result;
  */
 public class VariablePartitions implements MemoryManager {
 
+    /** Política de escolha do bloco livre. */
+    public enum Policy { WORST_FIT, CIRCULAR_FIT }
+
     /** Um pedaço contíguo da memória: livre (id == null) ou ocupado por um processo. */
     private static class Block {
         int start;
@@ -32,21 +35,26 @@ public class VariablePartitions implements MemoryManager {
     }
 
     private final int memorySize;
+    private final Policy policy;
     private final List<Block> blocks = new ArrayList<>(); // sempre ordenada por endereço
 
-    public VariablePartitions(int memorySize) {
+    /** Circular-Fit: endereço logo após a última partição alocada. Começa em 0. */
+    private int pointer = 0;
+
+    public VariablePartitions(int memorySize, Policy policy) {
         this.memorySize = memorySize;
+        this.policy = policy;
         blocks.add(new Block(0, memorySize, null)); // começa como um único bloco livre
     }
 
     @Override
     public String name() {
-        return "Partições variáveis (Worst-Fit)";
+        return "Partições variáveis (" + (policy == Policy.WORST_FIT ? "Worst-Fit" : "Circular-Fit") + ")";
     }
 
     @Override
     public Result in(String id, int size) {
-        int index = findWorstFit(size);
+        int index = (policy == Policy.WORST_FIT) ? findWorstFit(size) : findCircularFit(size);
         if (index < 0) {
             return Result.error(Result.NO_SPACE);
         }
@@ -61,6 +69,13 @@ public class VariablePartitions implements MemoryManager {
         // A sobra vira um bloco livre logo depois
         if (leftover > 0) {
             blocks.add(index + 1, new Block(chosen.start + size, leftover, null));
+        }
+
+        // Circular-Fit: o ponteiro vai para logo depois da partição criada
+        // (volta a 0 se chegou ao fim da memória)
+        pointer = chosen.start + size;
+        if (pointer == memorySize) {
+            pointer = 0;
         }
         return Result.ok(id + " alocado em [" + chosen.start + "-" + chosen.end() + "] (" + size + ")");
     }
@@ -80,6 +95,35 @@ public class VariablePartitions implements MemoryManager {
             }
         }
         return best;
+    }
+
+    /**
+     * Circular-Fit: começa no primeiro bloco com início >= ponteiro e segue em ordem
+     * de endereço; ao chegar no fim, volta ao começo da lista. Fica com o PRIMEIRO que couber.
+     * A busca é circular, a memória não: blocos do fim e do início nunca se juntam.
+     * @return índice do bloco na lista, ou -1 se nenhum couber
+     */
+    private int findCircularFit(int size) {
+        int n = blocks.size();
+
+        // Onde a busca começa: primeiro bloco com início >= ponteiro (ou o 0, se não houver)
+        int startIndex = 0;
+        for (int i = 0; i < n; i++) {
+            if (blocks.get(i).start >= pointer) {
+                startIndex = i;
+                break;
+            }
+        }
+
+        // Percorre todos os blocos uma vez, dando a volta com o resto da divisão (%)
+        for (int k = 0; k < n; k++) {
+            int i = (startIndex + k) % n;
+            Block b = blocks.get(i);
+            if (b.isFree() && b.size >= size) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -136,7 +180,11 @@ public class VariablePartitions implements MemoryManager {
         }
 
         String freeList = freeSizes.isEmpty() ? "nenhum" : String.join(" | ", freeSizes);
-        return "  Memória: " + String.join(" | ", regions) + "\n"
-             + "  Livres:  " + freeList + "   (total " + totalFree + ", maior " + largestFree + ")";
+        String text = "  Memória: " + String.join(" | ", regions) + "\n"
+                    + "  Livres:  " + freeList + "   (total " + totalFree + ", maior " + largestFree + ")";
+        if (policy == Policy.CIRCULAR_FIT) {
+            text += "\n  Ponteiro: " + pointer;
+        }
+        return text;
     }
 }

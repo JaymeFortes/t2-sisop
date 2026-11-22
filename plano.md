@@ -113,23 +113,23 @@ Fragmentação média:             ...
 
 ---
 
-## Etapa 1 — Esqueleto e leitura do arquivo (base comum)
+## Etapa 1 — Esqueleto e leitura do arquivo (base comum) ✅ concluída
 
 Tudo que os três modos compartilham. Faça primeiro — é a fundação.
 
-- [ ] **Parâmetros em tempo de execução** (perguntar ao usuário ou receber por argumento):
+- [x] **Parâmetros em tempo de execução** (perguntar ao usuário ou receber por argumento):
   - Modo: `1` (partições variáveis), `2` (buddy) ou `3` (paginação).
   - Tamanho da memória: **obrigatório**, **potência de 2** (validar!).
   - Política (**só modo 1**): `Worst-Fit` ou `Circular-Fit`.
   - Tamanho da página (**só modo 3**): potência de 2, **≤ tamanho da memória**. Nº de frames = memória ÷ página.
   - Caminho do arquivo de requisições.
   - Modo de execução: **passo a passo** (espera Enter a cada linha) ou **contínuo** (roda tudo).
-- [ ] **Parser do arquivo de requisições.** Um comando por linha:
+- [x] **Parser do arquivo de requisições.** Um comando por linha:
   - `IN(ID, tamanho)` — aloca `tamanho` posições para o processo `ID` (guardado como **texto**, para aceitar `A` dos exemplos e `12`).
   - `OUT(ID)` — libera toda a memória do processo `ID`.
   - `ACC(ID, endereço)` — **só modo 3**; nos modos 1 e 2, **ignorar com aviso**.
   - Dica: um regex simples resolve (`IN\((\w+),\s*(\d+)\)` etc.). Ignorar linhas em branco.
-- [ ] **Mensagens de erro padronizadas** (o comando é descartado, mas a execução continua):
+- [x] **Mensagens de erro padronizadas** (o comando é descartado, mas a execução continua):
 
   | Situação | Mensagem exata |
   |---|---|
@@ -139,7 +139,7 @@ Tudo que os três modos compartilham. Faça primeiro — é a fundação.
   | `ACC` com endereço ≥ tamanho do processo | `ERRO: ENDEREÇO INVÁLIDO` |
 
   > ⚠️ Processo **rejeitado por falta de espaço não é admitido** → um `OUT` posterior para ele dá `PROCESSO NÃO ENCONTRADO`. Escreva as mensagens **exatamente** como acima (acentos inclusos) — o professor testa com arquivo próprio.
-- [ ] **Interface comum entre os modos (Java).** Uma `interface MemoryManager` que os três modos implementam — assim o laço principal (ler linha → chamar método → imprimir) é **o mesmo** para os três (polimorfismo). Os erros comuns (ID repetido, ID inexistente, endereço inválido) ficam centralizados na classe `Simulator`, e cada modo só cuida da alocação:
+- [x] **Interface comum entre os modos (Java).** Uma `interface MemoryManager` que os três modos implementam — assim o laço principal (ler linha → chamar método → imprimir) é **o mesmo** para os três (polimorfismo). Os erros comuns (ID repetido, ID inexistente, endereço inválido) ficam centralizados na classe `Simulator`, e cada modo só cuida da alocação:
   ```java
   public interface MemoryManager {
       String name();
@@ -173,26 +173,26 @@ tests/                       // example1..4 = exemplos do enunciado
 
 ---
 
-## Etapa 2 — Modo 1: Partições variáveis (2,5 pts)
+## Etapa 2 — Modo 1: Partições variáveis (2,5 pts) ✅ concluída (falta só o teste #2)
 
 Memória começa como **um único bloco livre**. Cada `IN` corta uma partição do tamanho **exato** pedido; a sobra continua livre. Cada `OUT` libera, e **blocos livres adjacentes são fundidos**.
 
 **Estrutura sugerida:** lista de blocos ordenada por endereço, cada bloco = `{inicio, tamanho, livre, id}`.
 
 ### Worst-Fit
-- [ ] Percorrer todos os blocos livres e escolher o **maior** que comporte o processo.
-- [ ] Empate → o de **menor endereço**.
-- [ ] A partição é criada **no início** do bloco escolhido; a sobra vira bloco livre logo após.
+- [x] Percorrer todos os blocos livres e escolher o **maior** que comporte o processo.
+- [x] Empate → o de **menor endereço**.
+- [x] A partição é criada **no início** do bloco escolhido; a sobra vira bloco livre logo após.
 
 ### Circular-Fit (Next-Fit)
-- [ ] Manter um **ponteiro** que aponta para o endereço **logo após o fim da última partição alocada** (ou `0` se esse endereço = tamanho da memória). **Começa em 0.**
-- [ ] A busca começa no primeiro bloco livre com `inicio >= ponteiro`, segue em ordem crescente; se chegar ao fim, **volta ao primeiro bloco livre** (busca circular).
-- [ ] Aloca no **primeiro** bloco que couber.
-- [ ] ⚠️ **A memória NÃO é circular — só a busca é.** Blocos livres do fim e do início **nunca** se somam. Só funde blocos que são **vizinhos de fato**.
+- [x] Manter um **ponteiro** que aponta para o endereço **logo após o fim da última partição alocada** (ou `0` se esse endereço = tamanho da memória). **Começa em 0.**
+- [x] A busca começa no primeiro bloco livre com `inicio >= ponteiro`, segue em ordem crescente; se chegar ao fim, **volta ao primeiro bloco livre** (busca circular).
+- [x] Aloca no **primeiro** bloco que couber.
+- [x] ⚠️ **A memória NÃO é circular — só a busca é.** Blocos livres do fim e do início **nunca** se somam. Só funde blocos que são **vizinhos de fato**.
 
 ### Comum aos dois
-- [ ] `OUT`: marcar a partição como livre e **fundir** com vizinho livre à esquerda e/ou à direita.
-- [ ] Atualizar o ponteiro do Circular-Fit quando necessário.
+- [x] `OUT`: marcar a partição como livre e **fundir** com vizinho livre à esquerda e/ou à direita.
+- [x] Atualizar o ponteiro do Circular-Fit quando necessário.
 
 **Validação:** rodar os golden tests #1 e #2 (fim do arquivo) e bater **bloco a bloco** com as tabelas do PDF.
 
