@@ -1,0 +1,8 @@
+IN(A,8)
+IN(B, 4)
+OUT(A)
+ACC(B,3)
+foo
+IN(C)
+IN(D,0)
+OUT()
