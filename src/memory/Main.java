@@ -23,6 +23,9 @@ public class Main {
 
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
 
+        // Guarda os processos e trata os erros comuns aos três modos
+        Simulator simulator = new Simulator();
+
         int lineNumber = 0;
         for (String raw : lines) {
             String line = raw.strip();
@@ -39,10 +42,9 @@ public class Main {
                 continue;
             }
 
-            // Temporário: só para conferir que o parser entendeu certo
-            System.out.println("  -> tipo=" + command.type()
-                    + " id=" + command.id()
-                    + " valor=" + command.value());
+            // Executa e mostra o resultado
+            Result result = simulator.execute(command);
+            System.out.println("  -> " + result.formatted());
         }
     }
 }
