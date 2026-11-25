@@ -26,7 +26,7 @@ public class Paging implements MemoryManager {
 
     @Override
     public Result in(String id, int size) {
-        return Result.error("NÃO IMPLEMENTADO"); // TODO Etapa 4
+        return Result.error("NÃO IMPLEMENTADO");
     }
 
     @Override
