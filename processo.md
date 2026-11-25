@@ -1,7 +1,7 @@
 # TP2 SISOP — Progresso e próximo passo
 
 > Documento de passagem de bastão: o que já está pronto, como rodar e o que a próxima pessoa deve fazer.
-> Segue as etapas do `PLANO_TP2.md`. Última atualização: 22/11/2026.
+> Segue as etapas do `PLANO_TP2.md`. Última atualização: 25/11/2026.
 
 ---
 
@@ -12,10 +12,10 @@
 | 0 — Decisões iniciais | ✅ Concluída (Java 17, CLI, formato de saída, código em inglês) |
 | 1 — Esqueleto e leitura do arquivo | ✅ Concluída (parâmetros, parser, erros comuns, interface) |
 | 2 — Modo 1: partições variáveis (2,5 pts) | ✅ Worst-Fit e Circular-Fit prontos e validados com o teste #1 (falta o teste #2) |
-| 3 — Modo 2: buddy (2,5 pts) | ⬜ Só o esqueleto (`mode2/Buddy.java`) — **próximo passo** |
-| 4 — Modo 3: paginação (2,0 pts) | ⬜ Só o esqueleto (`mode3/Paging.java`) — **próximo passo** |
-| 5 — Visualização e resumo (1,0 pt) | 🟡 Parcial: estado por linha no modo 1 + admitidos/rejeitados no resumo |
-| 6 — Arquivos de teste | 🟡 Parcial: 3 arquivos pequenos (ver abaixo) |
+| 3 — Modo 2: buddy (2,5 pts) | ✅ Pronto e validado com o teste #3 |
+| 4 — Modo 3: paginação (2,0 pts) | ✅ Pronto e validado com o teste #4 |
+| 5 — Visualização e resumo (1,0 pt) | 🟡 Estado por linha pronto nos 3 modos; falta **ocupação máxima** e **fragmentação média** no resumo — **próximo passo** |
+| 6 — Arquivos de teste | 🟡 Parcial: 5 arquivos pequenos (ver abaixo); faltam os 3 próprios com ≥ 20 linhas |
 | 7, 8, 9 — Relatório, manual, entrega | ⬜ Não iniciados |
 
 ---
@@ -44,10 +44,12 @@ src/memory/
   MemoryManager.java           interface que os 3 modos implementam
   Simulator.java               trata os erros comuns e repassa a alocação ao modo
   mode1/VariablePartitions.java   modo 1: Worst-Fit e Circular-Fit (pronto)
-  mode2/Buddy.java             modo 2: esqueleto (devolve "NÃO IMPLEMENTADO")
-  mode3/Paging.java            modo 3: esqueleto (devolve "NÃO IMPLEMENTADO")
+  mode2/Buddy.java             modo 2: sistema buddy (pronto)
+  mode3/Paging.java            modo 3: paginação simples (pronto)
 tests/
   example-1.txt                teste #1 do enunciado (golden test do modo 1)
+  example-3.txt                teste #3 do enunciado (golden test do modo 2)
+  example-4.txt                teste #4 do enunciado (golden test do modo 3)
   invalid.txt                  linhas válidas e inválidas misturadas (testa o Parser)
   errors.txt                   ID repetido, OUT/ACC de inexistente, endereço inválido
 ```
@@ -93,6 +95,26 @@ linha do arquivo -> Parser -> Command -> Simulator -> MemoryManager (modo) -> Re
 - **Circular-Fit**: ponteiro começa em 0 e vai para logo depois da última partição alocada (volta a 0 no fim da memória). A busca começa no primeiro bloco com início ≥ ponteiro e dá a volta na lista com `%`. **Só a busca é circular**: blocos do fim e do início nunca se juntam.
 - **Validação**: as duas colunas do teste #1 do plano batem linha por linha (o `G(7)` é rejeitado no Worst-Fit e aceito no Circular-Fit).
 
+### Modo 2 (`Buddy`)
+
+- Memória = **árvore binária**: a raiz é a memória inteira; um nó dividido tem dois filhos com metade do tamanho (os *buddies*). Só as **folhas** são blocos reais (livre = `id == null`, alocada = tem `id`).
+- O estado do nó sai das referências: tem filhos = dividido; folha com `id` = alocada; folha sem `id` = livre.
+- **IN**: arredonda para a menor potência de 2 ≥ pedido; `findSmallestFree` percorre as folhas da esquerda para a direita e fica com a **menor** que caiba (empate = menor endereço, `<` estrito); divide ao meio descendo **sempre pela esquerda** até o tamanho certo.
+- **OUT**: libera a folha e chama `coalesce(root)`, que resolve os filhos antes do pai: se os dois filhos ficaram livres, o nó volta a ser folha. Como a recursão volta subindo, a fusão se repete enquanto o buddy estiver livre. Só filhos do **mesmo nó** se fundem.
+- **Frag. interna**: cada folha guarda `requested`; o `state()` soma `size - requested` das ocupadas. Ocupado aparece como `ID(pedido/bloco)`.
+- **Validação**: o teste #3 bate linha por linha (frag. 3 → 10 → 22 → 24 → 24 → 21 → 19 → 12 → 0; fusões em `[0-15]`, `[0-31]`, `[0-63]`).
+
+### Modo 3 (`Paging`)
+
+- Memória = **vetor de frames** (`String[] frames`, `null` = livre) + `Map` id → **tabela de páginas** (`List<Integer>`: posição = página, valor = frame) + `Map` id → tamanho pedido.
+- **IN**: páginas = `(size + pageSize - 1) / pageSize` (teto só com inteiros). Conta os frames livres **antes** de ocupar: se faltar algum, recusa sem ocupar nada (sem memória virtual). Ocupa os livres de **menor índice**, contíguos ou não.
+- **OUT**: libera todos os frames da tabela do processo.
+- **ACC**: página = `address / pageSize`, deslocamento = `address % pageSize`, físico = `frame * pageSize + deslocamento`. Não valida nada: o `Simulator` já checou ID e endereço.
+- **Frag. interna**: soma de `páginas * pageSize - tamanho` de cada processo.
+- **Tabela no estado**: `lastInvolved` guarda o processo da última operação; é limpo depois de cada `state()`, para uma linha que nem chegou ao modo (ex.: ACC inválido) não repetir a tabela anterior.
+- **Validação**: o teste #4 bate linha por linha (`ACC(B,8)` → físico 32; `ACC(A,22)` → endereço inválido; último `C` em frames 0, 1, 2, 7).
+- **Dado já coletado para o relatório** (mesmo `example-4.txt`, memória 64): página 8 → 8 frames, 1 rejeitado, frag. final 9; página 32 → 2 frames, 2 rejeitados, frag. final 25.
+
 ---
 
 ## Como compilar e rodar (Windows, cmd)
@@ -118,56 +140,45 @@ java -cp out memory.Main          (sem nada: pergunta tudo)
 
 ---
 
-## ▶ Próximo passo: modos 2 e 3 (podem ser feitos em paralelo)
+## ▶ Próximo passo: resumo completo (Etapa 5 do plano)
 
-Cada modo é uma classe que **já existe como esqueleto** e implementa `MemoryManager`. Basta preencher `in`, `out` e `state` (e `acc` no modo 3). `Main` e `Simulator` **não mudam**.
+Os três modos estão prontos. Falta o resumo final ter os 4 itens do enunciado; hoje só tem admitidos e rejeitados.
 
-### Modo 2 — `mode2/Buddy.java` (Etapa 3 do plano, 2,5 pts)
+| Item do resumo | Situação |
+|---|---|
+| Processos admitidos | ✅ (`Simulator.admitted()`) |
+| Rejeitados por falta de espaço | ✅ (`Simulator.rejected()`) |
+| **Ocupação máxima** da memória | ⬜ |
+| **Fragmentação média** ao longo da execução | ⬜ |
 
-1. **Estrutura**: árvore binária de blocos (nó = `start`, `size`, livre/dividido/alocado, `id`, `requested`) **ou** listas de blocos livres por tamanho.
-2. **IN**: arredondar para a menor potência de 2 ≥ tamanho (5→8, 20→32); pegar o menor bloco livre que caiba; dividir ao meio até chegar no tamanho; alocar sempre o **da esquerda**. Sem bloco → `Result.error(Result.NO_SPACE)`.
-3. **OUT**: liberar; se o buddy também estiver livre, fundir; repetir subindo.
-4. **`state()`** no formato do plano:
+**Proposta de implementação:**
+
+1. Acrescentar dois métodos na interface `MemoryManager`, implementados por cada modo:
+   - `int usedMemory()` — memória ocupada agora (modo 1: soma das partições; modo 2: soma dos blocos alocados; modo 3: frames ocupados × página).
+   - `int fragmentation()` — fragmentação agora:
+     - modos 2 e 3: a **frag. interna total** (o mesmo número que já aparece no estado);
+     - modo 1: **fragmentação externa** = memória livre fora do maior bloco livre (`totalLivre - maiorLivre`). É o espaço que existe mas não serve para um processo grande.
+2. Criar `Statistics.java`: depois de cada linha executada, registra `usedMemory()` e `fragmentation()`; guarda o máximo de ocupação e a soma/contagem para a média.
+3. No fim, o `Main` imprime:
    ```
-     Memória: [0-7] A(5/8) | [8-15] livre(8) | [16-31] B(9/16) | [32-63] C(20/32)
-     Livres:  8   (total 8)
-     Frag. interna total: 22
+   Ocupação máxima:                28/32 (87,5%)
+   Fragmentação média:             4,3
    ```
-   (ocupado = `ID(pedido/bloco)`; frag. interna = soma de `bloco - pedido`).
-5. **Validar** com o teste #3 (criar `tests\example-3.txt`):
-   `IN(A,5) IN(B,9) IN(C,20) IN(D,6) IN(E,3) OUT(A) OUT(D) OUT(B) OUT(C)`, memória 64.
-   Frag. interna esperada: 3 → 10 → 22 → 24 → (E rejeitado) 24 → 21 → 19 → 12 → 0.
+4. Deixar claro no manual/relatório o que "fragmentação" significa em cada modo (interna × externa).
 
-### Modo 3 — `mode3/Paging.java` (Etapa 4 do plano, 2,0 pts)
-
-1. **Estrutura**: vetor de frames (`String[] frames`, `null` = livre) + `Map<String, List<Integer>>` id → tabela de páginas.
-2. **IN**: páginas = `ceil(size / pageSize)`; se frames livres < páginas → `NO_SPACE`; senão ocupa os frames livres de **menor índice** (não precisam ser contíguos).
-3. **OUT**: libera todos os frames do processo.
-4. **ACC** (`supportsAcc()` já devolve `true`): página = `address / pageSize`, deslocamento = `address % pageSize`, frame = tabela[página], físico = `frame * pageSize + deslocamento`. O `Simulator` já valida ID e endereço.
-5. **`state()`** no formato do plano:
-   ```
-     Frames:  0:A 1:A 2:A 3:B 4:B 5:D 6:D 7:-
-     Livres:  7   (1 frame)
-     Tabela D: p0->f5  p1->f6
-     Frag. interna total: 11
-   ```
-   (a tabela mostrada é a do processo da última linha; frag. interna = soma de `páginas * pageSize - size`).
-6. **Validar** com o teste #4 (criar `tests\example-4.txt`):
-   `IN(A,20) IN(B,9) IN(C,30) IN(D,16) ACC(B,8) ACC(A,22) OUT(A) IN(C,30)`, memória 64, página 8.
-   Conferir: `ACC(B,8)` → físico 32; `ACC(A,22)` → `ERRO: ENDEREÇO INVÁLIDO`; o último `C` em frames 0,1,2,7.
+Depois disso: **Etapa 6** (3 arquivos de teste próprios, ≥ 20 linhas, um que favoreça Worst-Fit e outro Circular-Fit), **Etapa 7** (relatório) e **Etapa 8** (manual).
 
 ---
 
 ## Pendências menores
 
 - **Modo 1:** criar `tests\example-2.txt` (teste #2 do plano) — conferir no enunciado o tamanho de memória usado.
-- **Etapa 5:** falta **ocupação máxima** e **fragmentação média** no resumo final (criar `Statistics.java`). Melhor fazer depois que os 3 modos existirem.
 
 ---
 
 ## Checklist rápido para quem pegar agora
 
-- [ ] Ler a seção *Formato de saída* e as etapas 3–5 do `PLANO_TP2.md`
-- [ ] Compilar e rodar `example-1.txt` nas duas políticas para ver tudo funcionando
-- [ ] Escolher o modo (2 ou 3), preencher o esqueleto e validar com o teste do plano
+- [ ] Ler a seção *Formato de saída* e as etapas 5–8 do `PLANO_TP2.md`
+- [ ] Compilar e rodar os 4 golden tests (`example-1` nas duas políticas, `example-3`, `example-4`) para ver tudo funcionando
+- [ ] Implementar ocupação máxima e fragmentação média (Etapa 5) e conferir que os golden tests continuam iguais
 - [ ] Commit com mensagem clara e atualizar este arquivo

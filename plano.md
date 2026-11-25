@@ -198,33 +198,33 @@ Memória começa como **um único bloco livre**. Cada `IN` corta uma partição 
 
 ---
 
-## Etapa 3 — Modo 2: Sistema buddy (2,5 pts)
+## Etapa 3 — Modo 2: Sistema buddy (2,5 pts) ✅ concluída (validada com o teste #3)
 
 Memória = segmento único potência de 2, dividido recursivamente em pares de **companheiros (buddies)**.
 
 **Estrutura sugerida:** árvore binária de blocos (cada nó = `{tamanho, inicio, estado: livre/dividido/alocado, id}`), ou listas de blocos livres por tamanho (uma lista para 2, 4, 8, …).
 
-- [ ] **Arredondar** cada pedido para a **menor potência de 2 ≥ tamanho** (5→8, 16→16, 20→32).
-- [ ] **Alocar** no menor bloco livre que comporte o arredondado. Se for maior que o necessário, **dividir** em dois buddies repetidamente até chegar no tamanho. O bloco alocado é sempre o **da esquerda** (menor endereço).
-- [ ] **Liberar:** se o **buddy também estiver livre**, **coalescer** (fundir) os dois; repetir subindo enquanto der.
-- [ ] **Fragmentação interna** de cada processo = `bloco alocado − tamanho pedido`. **Exibir o total a cada linha.**
-- [ ] Neste modo o usuário só informa `IN`/`OUT` (sem política, sem página).
+- [x] **Arredondar** cada pedido para a **menor potência de 2 ≥ tamanho** (5→8, 16→16, 20→32).
+- [x] **Alocar** no menor bloco livre que comporte o arredondado. Se for maior que o necessário, **dividir** em dois buddies repetidamente até chegar no tamanho. O bloco alocado é sempre o **da esquerda** (menor endereço).
+- [x] **Liberar:** se o **buddy também estiver livre**, **coalescer** (fundir) os dois; repetir subindo enquanto der.
+- [x] **Fragmentação interna** de cada processo = `bloco alocado − tamanho pedido`. **Exibir o total a cada linha.**
+- [x] Neste modo o usuário só informa `IN`/`OUT` (sem política, sem página).
 
 **Validação:** golden test #3 — conferir a árvore e a fragmentação interna total em cada passo (3 → 10 → 22 → 24 → cheia; depois coalescências até 0).
 
 ---
 
-## Etapa 4 — Modo 3: Paginação simples (2,0 pts)
+## Etapa 4 — Modo 3: Paginação simples (2,0 pts) ✅ concluída (validada com o teste #4)
 
 Memória dividida em **frames** de tamanho fixo (= tamanho da página). Cada processo vira **páginas** e ganha uma **tabela de páginas** (página → frame). **Sem memória virtual:** só admite se **todas** as páginas couberem.
 
 **Estrutura sugerida:** vetor de frames (`frame[i] = id ou livre`) + dicionário `id → tabela de páginas (lista de frames)`.
 
-- [ ] **Nº de páginas** = `teto(tamanho ÷ tamanho da página)`.
-- [ ] **Alocar** nos frames livres de **menor índice** (não precisam ser contíguos). Se frames livres < páginas necessárias → `ESPAÇO INSUFICIENTE DE MEMÓRIA`.
-- [ ] **Fragmentação interna** = sobra da última página (`páginas × tamanho_página − tamanho`). Exibir o **total** a cada linha.
-- [ ] `OUT`: liberar **todos** os frames do processo.
-- [ ] `ACC(id, endereço)`:
+- [x] **Nº de páginas** = `teto(tamanho ÷ tamanho da página)`.
+- [x] **Alocar** nos frames livres de **menor índice** (não precisam ser contíguos). Se frames livres < páginas necessárias → `ESPAÇO INSUFICIENTE DE MEMÓRIA`.
+- [x] **Fragmentação interna** = sobra da última página (`páginas × tamanho_página − tamanho`). Exibir o **total** a cada linha.
+- [x] `OUT`: liberar **todos** os frames do processo.
+- [x] `ACC(id, endereço)`:
   - `página = endereço ÷ tamanho_página` · `deslocamento = endereço mod tamanho_página`
   - validar `endereço < tamanho do processo` (senão `ERRO: ENDEREÇO INVÁLIDO`)
   - consultar a tabela → **frame**, e **endereço físico = frame × tamanho_página + deslocamento**.
@@ -236,14 +236,14 @@ Memória dividida em **frames** de tamanho fixo (= tamanho da página). Cada pro
 ## Etapa 5 — Visualização e resumo (1,0 pt)
 
 A **cada linha**, imprimir no mínimo:
-- [ ] o comando e seu resultado (sucesso ou mensagem de erro);
-- [ ] **blocos livres contíguos** (modos 1 e 2) ou **frames livres** (modo 3), com o total;
-- [ ] um **mapa** (textual já basta) da memória mostrando a que processo cada região pertence; no modo 3, a **tabela de páginas** do processo envolvido;
-- [ ] **fragmentação interna total** (modos 2 e 3) **ou** o **maior bloco livre + total livre** (modo 1, para enxergar a fragmentação externa).
+- [x] o comando e seu resultado (sucesso ou mensagem de erro);
+- [x] **blocos livres contíguos** (modos 1 e 2) ou **frames livres** (modo 3), com o total;
+- [x] um **mapa** (textual já basta) da memória mostrando a que processo cada região pertence; no modo 3, a **tabela de páginas** do processo envolvido;
+- [x] **fragmentação interna total** (modos 2 e 3) **ou** o **maior bloco livre + total livre** (modo 1, para enxergar a fragmentação externa).
 
 Ao **fim da execução**, um **resumo**:
-- [ ] nº de processos **admitidos**;
-- [ ] nº de processos **rejeitados** por falta de espaço;
+- [x] nº de processos **admitidos**;
+- [x] nº de processos **rejeitados** por falta de espaço;
 - [ ] **ocupação máxima** da memória atingida;
 - [ ] **fragmentação média** ao longo da execução.
 
