@@ -1,0 +1,192 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.15}
+\newcommand{\cmd}[1]{\texttt{#1}}
+
+\begin{document}
+
+\begin{center}
+    {\small PUCRS \enspace $\cdot$ \enspace Sistemas Operacionais \enspace $\cdot$ \enspace Trabalho Prático 2}\\[6pt]
+    {\LARGE\bfseries Manual do usuário}\\[4pt]
+    {\large Simulador de gerenciamento de memória}\\[8pt]
+    Jayme Fortes, Rodrigo Gagliardi e Lucca Marques
+\end{center}
+
+\section{Instalação e execução}
+
+O simulador lê um arquivo de texto com pedidos de alocação, liberação e
+acesso à memória. É executado no terminal e requer um \textbf{JDK 17 ou
+superior}. A compilação usa \cmd{--release 17} e a biblioteca padrão do Java.
+
+Extraia o ZIP e abra o terminal na raiz do projeto, onde ficam as pastas
+\cmd{src/} e \cmd{tests/}. Para confirmar se o JDK está no \cmd{PATH},
+execute \cmd{javac -version} e \cmd{java -version}.
+
+\subsection*{Windows com PowerShell}
+
+Execute o atalho abaixo para compilar e abrir o simulador no modo interativo.
+
+\begin{verbatim}
+.\start
+\end{verbatim}
+
+O atalho usa o JDK local em \cmd{oracleJdk-27/}, quando disponível, ou
+o JDK do \cmd{PATH}. Com o JDK no \cmd{PATH}, também é possível compilar
+e iniciar manualmente no PowerShell.
+
+\begin{verbatim}
+$fontes = (Get-ChildItem src -Recurse -File -Filter '*.java').FullName
+javac -encoding UTF-8 --release 17 -d out $fontes
+java -cp out memory.Main
+\end{verbatim}
+
+\subsection*{Linux e macOS}
+
+Execute os comandos abaixo a partir da raiz do projeto.
+
+\begin{verbatim}
+javac -encoding UTF-8 --release 17 -d out $(find src -name '*.java')
+java -cp out memory.Main
+\end{verbatim}
+
+Continue para a execução após uma compilação bem-sucedida. Se o terminal
+informar que \cmd{javac} não foi encontrado, verifique se o JDK está
+instalado e se a pasta \cmd{bin} dele está no \cmd{PATH}.
+
+\clearpage
+
+\section{Parâmetros e exemplos}
+
+Após iniciar o programa sem argumentos, escolha o modo e o tamanho
+da memória. Informe uma potência de 2, como 32 ou 64. O modo 1 pede
+a política. O modo 3 pede o tamanho da página, que também deve ser
+potência de 2 e menor ou igual ao tamanho da memória. Em seguida,
+informe o arquivo de requisições e escolha a forma de execução.
+
+\begin{itemize}
+    \item \cmd{s} ativa o passo a passo. Pressione Enter para avançar
+    após a exibição de cada comando e do estado da memória.
+    \item \cmd{n} executa o arquivo inteiro e imprime os resultados sem pausas.
+\end{itemize}
+
+O caminho do arquivo pode ser relativo à raiz do projeto, como
+\cmd{tests/example-1.txt}, ou absoluto. Para arquivos em \cmd{tests/},
+também é possível digitar um nome curto, como \cmd{example-1}.
+
+\subsection*{Exemplos interativos}
+
+Digite as respostas da tabela na ordem indicada, uma por vez.
+Todos os exemplos usam o modo contínuo.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Modo & Respostas em ordem \\
+\midrule
+1 --- Partições variáveis & \cmd{1}, \cmd{32}, \cmd{1} (Worst-Fit),
+\cmd{tests/example-1.txt}, \cmd{n}. Para Circular-Fit, escolha
+\cmd{2} na pergunta da política. \\
+2 --- Sistema buddy & \cmd{2}, \cmd{64}, \cmd{tests/example-3.txt}, \cmd{n}. \\
+3 --- Paginação simples & \cmd{3}, \cmd{64}, \cmd{8} (tamanho da página),
+\cmd{tests/example-4.txt}, \cmd{n}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Com o arquivo \cmd{example-1.txt}, o resumo esperado é de seis admitidos
+e um rejeitado no Worst-Fit e de sete admitidos e zero rejeitados no
+Circular-Fit. Os exemplos de buddy e paginação acima dão quatro admitidos
+e um rejeitado cada. Na paginação, \cmd{ACC(B,8)} resulta no endereço
+físico 32.
+
+\subsection*{Execução direta por argumentos}
+
+Após compilar, é possível fornecer todos os parâmetros na linha de
+comando. Este exemplo executa partições variáveis com Worst-Fit, 64
+posições de memória e o arquivo \cmd{tests/teste1.txt}.
+
+\begin{small}
+\begin{verbatim}
+java -cp out memory.Main tests/teste1.txt --mode 1 --mem 64 --policy worst --continuous
+\end{verbatim}
+\end{small}
+
+O resumo esperado é de sete admitidos e sete rejeitados. Em
+\cmd{--policy}, use \cmd{worst} ou \cmd{circular}. Para paginação,
+informe \cmd{--mode 3} e \cmd{--page} com o tamanho da página.
+Use \cmd{--step} para avançar com Enter.
+
+\clearpage
+
+\section{Arquivo de requisições}
+
+Salve o arquivo em UTF-8, com um comando por linha. Os endereços lógicos
+de um processo começam em zero. Linhas em branco são ignoradas.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Comando & Efeito \\
+\midrule
+\cmd{IN(ID,tamanho)} & Solicita a alocação do número indicado de posições.
+O tamanho deve ser inteiro e positivo. \\
+\cmd{OUT(ID)} & Libera a memória ocupada pelo processo. \\
+\cmd{ACC(ID,endereço)} & Traduz o endereço lógico no modo 3.
+Nos modos 1 e 2, exibe um aviso e segue a execução. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Por exemplo, o arquivo abaixo aloca 6 posições para \cmd{A}, acessa
+o último endereço lógico válido e depois libera o processo.
+
+\begin{verbatim}
+IN(A,6)
+ACC(A,5)
+OUT(A)
+\end{verbatim}
+
+\section{Como interpretar a saída}
+
+A saída mostra o estado inicial e o resultado de cada comando. Nos modos
+1 e 2, o mapa usa intervalos como \cmd{[0-7]}, com os dois extremos
+incluídos. O mapa indica quais regiões estão livres e qual processo ocupa
+cada região alocada. No modo 1, a lista mostra o total livre e o maior
+bloco livre. No buddy, a saída também informa a fragmentação interna total.
+
+Na paginação, o mapa lista o dono de cada frame e os frames disponíveis.
+Uma entrada \cmd{p1->f4} associa a página 1 ao frame 4. O comando
+\cmd{ACC} mostra a página, o deslocamento, o frame e o endereço físico.
+A saída também indica a fragmentação interna total e informa quando a
+tabela de páginas é liberada.
+
+O resumo final apresenta o total de processos admitidos, os rejeitados por
+falta de espaço, a ocupação máxima e a fragmentação média.
+
+\subsection*{Mensagens comuns}
+
+\begin{itemize}
+    \item \textbf{Espaço insuficiente de memória.} O pedido não cabe no
+    estado atual. O processo fica fora da memória.
+    \item \textbf{Processo já existe.} O ID do \cmd{IN} já está em uso.
+    \item \textbf{Processo não encontrado.} O ID informado em \cmd{OUT}
+    ou em um \cmd{ACC} de paginação está ausente.
+    \item \textbf{Endereço inválido.} No modo 3, o endereço é negativo
+    ou alcança ou ultrapassa o tamanho do processo.
+    \item \textbf{Linha inválida.} O comando foi ignorado. Verifique seu formato.
+\end{itemize}
+
+\end{document}
