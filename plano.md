@@ -16,7 +16,7 @@ Roteiro dividido em etapas para o grupo (3 integrantes) construir a ferramenta, 
     - (opcional) empacotar: `jar cfe TP2.jar memory.Main -C out .` → roda com `java -jar TP2.jar`
 - [x] **Idioma do código: inglês.** ✔ Nomes de classes, métodos, variáveis, pacotes e pastas em **inglês**; **comentários e documentação** (Javadoc, README, manual, relatório) em **português**. A **saída impressa** continua em português, porque as mensagens de erro do enunciado precisam ser idênticas.
 - [x] **Interface: linha de comando (CLI).** ✔ Parâmetros por argumento ou perguntados no terminal. Sem GUI.
-- [ ] **Repositório Git:** criar depois que o código base estiver rodando. Fechar também a divisão de tarefas (ver tabela no fim).
+- [x] **Repositório Git criado.** ✔ Integrantes: Jayme Fortes, Rodrigo Gagliardi e Lucca Marques.
 - [x] **Formato de saída definido.** ✔ Ver a seção **Formato de saída** logo abaixo.
 
 **Entregável da etapa:** **Java** fixado, CLI e formato de saída definidos, tarefas distribuídas.
@@ -106,10 +106,12 @@ Nos modos 1 e 2, ACC vira `  -> OK: AVISO: ACC ignorado neste modo`.
 ```
 === RESUMO ===
 Processos admitidos:            7
-Rejeitados por falta de espaço: 1
-Ocupação máxima:                28/32 (87,5%)
-Fragmentação média:             ...
+Rejeitados por falta de espaço: 0
+Ocupação máxima:                25/32 (78,1%)
+Fragmentação média:             4,10 posições (externa)
 ```
+
+Fragmentação média: interna nos modos 2 e 3; externa no modo 1 (`total livre − maior bloco livre`).
 
 ---
 
@@ -165,15 +167,15 @@ src/memory/
   mode1/VariablePartitions.java   // Worst-Fit e Circular-Fit
   mode2/Buddy.java
   mode3/Paging.java
-  Statistics.java            // (Etapa 5) ocupação máxima e fragmentação média
-tests/                       // example1..4 = exemplos do enunciado
+  Statistics.java            // ocupação máxima e fragmentação média do resumo
+tests/                       // example-1, -3, -4 = exemplos do enunciado; favorece-*, misto = próprios
 ```
 
 **Entregável da etapa:** `Main` lê os parâmetros, lê o arquivo, despacha cada linha para um gerenciador (ainda vazio) e imprime os erros corretamente.
 
 ---
 
-## Etapa 2 — Modo 1: Partições variáveis (2,5 pts) ✅ concluída (falta só o teste #2)
+## Etapa 2 — Modo 1: Partições variáveis (2,5 pts) ✅ concluída (validada com o teste #1)
 
 Memória começa como **um único bloco livre**. Cada `IN` corta uma partição do tamanho **exato** pedido; a sobra continua livre. Cada `OUT` libera, e **blocos livres adjacentes são fundidos**.
 
@@ -194,7 +196,7 @@ Memória começa como **um único bloco livre**. Cada `IN` corta uma partição 
 - [x] `OUT`: marcar a partição como livre e **fundir** com vizinho livre à esquerda e/ou à direita.
 - [x] Atualizar o ponteiro do Circular-Fit quando necessário.
 
-**Validação:** rodar os golden tests #1 e #2 (fim do arquivo) e bater **bloco a bloco** com as tabelas do PDF.
+**Validação:** rodar o golden test #1 (fim do arquivo) nas duas políticas e bater **bloco a bloco** com a tabela do PDF.
 
 ---
 
@@ -233,7 +235,7 @@ Memória dividida em **frames** de tamanho fixo (= tamanho da página). Cada pro
 
 ---
 
-## Etapa 5 — Visualização e resumo (1,0 pt)
+## Etapa 5 — Visualização e resumo (1,0 pt) ✅ concluída
 
 A **cada linha**, imprimir no mínimo:
 - [x] o comando e seu resultado (sucesso ou mensagem de erro);
@@ -244,25 +246,25 @@ A **cada linha**, imprimir no mínimo:
 Ao **fim da execução**, um **resumo**:
 - [x] nº de processos **admitidos**;
 - [x] nº de processos **rejeitados** por falta de espaço;
-- [ ] **ocupação máxima** da memória atingida;
-- [ ] **fragmentação média** ao longo da execução.
+- [x] **ocupação máxima** da memória atingida;
+- [x] **fragmentação média** ao longo da execução (interna nos modos 2 e 3; externa no modo 1 = total livre − maior bloco livre).
 
 > Seguir o **Formato de saída** definido depois da Etapa 0 (mapa como lista de regiões `[início-fim] ID(tam)`).
 
 ---
 
-## Etapa 6 — Arquivos de teste (parte do 1,0 pt do relatório)
+## Etapa 6 — Arquivos de teste (parte do 1,0 pt do relatório) ✅ concluída
 
-- [ ] Criar **≥ 3 arquivos** de requisições próprios, **≥ 20 linhas cada**, incluindo:
+- [x] Criar **≥ 3 arquivos** de requisições próprios, **≥ 20 linhas cada**, incluindo:
   - casos de **rejeição** por falta de espaço;
   - casos de **erro de comando** (ID repetido, OUT de inexistente, ACC inválido);
   - um arquivo que **favoreça o Circular-Fit** e outro que **favoreça o Worst-Fit** (para a comparação do relatório).
-- [ ] Guardar os 4 exemplos do enunciado como arquivos de **regressão** (devem sempre bater).
-- [ ] Os arquivos acompanham o código no .zip.
+- [x] Guardar os 3 exemplos do enunciado (`example-1`, `example-3`, `example-4`) como arquivos de **regressão** (devem sempre bater).
+- [x] Os arquivos acompanham o código no .zip: `favorece-circular.txt`, `favorece-worst.txt`, `misto.txt` (26–27 linhas cada).
 
 ---
 
-## Etapa 7 — Relatório de experimentos (1,0 pt) — PDF, 3 a 5 páginas
+## Etapa 7 — Relatório de experimentos (1,0 pt) — PDF, 3 a 5 páginas ▶ próximo passo
 
 Rodar os experimentos e escrever. Conteúdo obrigatório:
 1. [ ] **Arquivos de teste** usados (descrever cada um).
@@ -278,7 +280,7 @@ Rodar os experimentos e escrever. Conteúdo obrigatório:
 ## Etapa 8 — Manual do usuário (0,5 pt) + organização do código
 
 - [ ] **Manual (PDF):** versão do **JDK** usada; como **compilar** (`javac -encoding UTF-8 --release 17 -d out $(find src -name "*.java")`) e **executar** (`java -cp out memory.Main`); formato do arquivo de requisições; exemplos de uso dos 3 modos; significado das saídas.
-- [ ] **Código organizado:** separar por pacote (`Parser`, `mode1`, `mode2`, `mode3`, `Statistics`, `Main`) conforme a estrutura da Etapa 1. Nomes claros, Javadoc/comentários nos pontos-chave.
+- [x] **Código organizado:** separar por pacote (`Parser`, `mode1`, `mode2`, `mode3`, `Statistics`, `Main`) conforme a estrutura da Etapa 1. Nomes claros, Javadoc/comentários nos pontos-chave.
 
 ---
 
@@ -342,9 +344,7 @@ Requisições: `IN(A,8) IN(B,4) IN(C,6) IN(D,5) OUT(A) OUT(C) IN(E,3) IN(F,6) IN
 
 Ponto-chave: no Worst-Fit o `F` vai para o maior bloco (8, no início), então o `G(7)` é **rejeitado** mesmo com 14 livres no total (**fragmentação externa**). No Circular-Fit o `F` ocupa o bloco de 6 do fim (busca a partir do ponteiro), o ponteiro volta a 0, e o `G` cabe no bloco de 8 do início.
 
-### Teste #2 — Modo 1, divergência das políticas
-
-Requisições: `IN(A,5) IN(B,9) IN(C,20) IN(D,6) IN(E,3) OUT(A) OUT(D) OUT(B) OUT(C)` (memória conforme o enunciado — serve para exercitar fusão e o ponteiro).
+> **Nota:** versões antigas deste plano listavam um "Teste #2" de partições variáveis com a mesma sequência do teste #3. Foi um erro de transcrição: o enunciado tem **um** cenário de partições variáveis (o teste #1), executado nas duas políticas.
 
 ### Teste #3 — Modo 2 (buddy), memória 64
 
@@ -385,4 +385,5 @@ Requisições: `IN(A,20) IN(B,9) IN(C,30) IN(D,16) ACC(B,8) ACC(A,22) OUT(A) IN(
 - Buddy: bloco alocado é sempre o **da esquerda**; coalescer **enquanto** o buddy estiver livre.
 - Paginação: frames de **menor índice**, sem precisar contíguos; admitir só se **todas** as páginas couberem.
 - Validar que o tamanho da memória (e página) é **potência de 2**.
+- Recusar `IN` maior que a memória **antes** de qualquer conta (evita estouro de `int` com tamanhos enormes).
 - Saída só com ASCII além dos acentos obrigatórios (nada de `→` impresso).

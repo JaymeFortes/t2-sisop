@@ -45,6 +45,8 @@ rm -rf out
 javac -encoding UTF-8 --release 17 -d out $(find src -name "*.java")
 ```
 
+No **PowerShell**, troque a primeira linha por `Remove-Item -Recurse -Force out`.
+
 Se o `javac` não imprimir nada, a compilação deu certo. Apagar a pasta `out` antes evita rodar, sem perceber, uma versão antiga compilada.
 
 ---
@@ -150,7 +152,20 @@ Um bloco ocupado aparece como `ID(pedido/bloco)`. A fragmentação interna é a 
 
 **Resumo final**
 
-Ao fim da execução aparece o número de processos admitidos e de rejeitados por falta de espaço. *(Ocupação máxima e fragmentação média estão em implementação — Etapa 5.)*
+Ao fim da execução aparece o resumo pedido na seção 8 do enunciado:
+
+```
+=== RESUMO ===
+Processos admitidos:            7
+Rejeitados por falta de espaço: 0
+Ocupação máxima:                25/32 (78,1%)
+Fragmentação média:             4,10 posições (externa)
+```
+
+- **Ocupação máxima:** maior quantidade de memória ocupada ao longo da execução. No buddy e na paginação conta o bloco/frame inteiro, porque a sobra interna também fica reservada.
+- **Fragmentação média:** média, entre todas as linhas executadas (inclusive as que deram erro), da fragmentação naquele momento:
+  - modos 2 e 3: fragmentação **interna** total;
+  - modo 1: fragmentação **externa**, medida como `total livre − maior bloco livre` (o espaço livre que existe, mas está picado em blocos menores que o maior).
 
 ---
 
@@ -164,6 +179,7 @@ src/memory/
   Simulator.java                trata os erros comuns aos três modos e repassa a alocação ao modo
   MemoryManager.java            interface que os três modos implementam
   Result.java                   sucesso/erro + as mensagens exatas do enunciado
+  Statistics.java               ocupação máxima e fragmentação média do resumo final
   mode1/VariablePartitions.java partições variáveis: Worst-Fit e Circular-Fit
   mode2/Buddy.java              sistema buddy (árvore binária de blocos)
   mode3/Paging.java             paginação simples (vetor de frames + tabelas de páginas)
@@ -171,6 +187,9 @@ tests/
   example-1.txt                 exemplo do enunciado, modo 1 (seção 5.2)
   example-3.txt                 exemplo do enunciado, modo 2 (seção 6.1)
   example-4.txt                 exemplo do enunciado, modo 3 (seção 7.1)
+  favorece-circular.txt         26 linhas: sequência em que o Circular-Fit rejeita menos que o Worst-Fit
+  favorece-worst.txt            26 linhas: sequência em que o Worst-Fit rejeita menos que o Circular-Fit
+  misto.txt                     27 linhas: tamanhos variados, ACC, todos os tipos de erro (usado nos 3 modos)
   invalid.txt                   linhas válidas e inválidas misturadas
   errors.txt                    ID repetido, OUT/ACC de inexistente, endereço inválido
   test.txt                      pedido maior que a memória (caso de borda)
@@ -195,6 +214,17 @@ Os três exemplos do enunciado foram usados como testes de regressão e a saída
 - **Modo 1 (seção 5.2):** as duas colunas, Worst-Fit e Circular-Fit — o `IN(G,7)` é rejeitado no Worst-Fit (fragmentação externa) e aceito no Circular-Fit.
 - **Modo 2 (seção 6.1):** fragmentação interna 3 → 10 → 22 → 24 → (E rejeitado) 24 → 21 → 19 → 12 → 0, com as coalescências nos pontos esperados.
 - **Modo 3 (seção 7.1):** `ACC(B,8)` → endereço físico 32; `ACC(A,22)` → endereço inválido; a última alocação de `C` usa os frames 0, 1, 2 e 7 (não contíguos).
+
+Resumo esperado de cada exemplo:
+
+| Execução | Admitidos | Rejeitados | Ocupação máxima | Fragmentação média |
+|---|---|---|---|---|
+| `example-1`, `--mem 32 --policy worst` | 6 | 1 | 23/32 (71,9%) | 5,60 (externa) |
+| `example-1`, `--mem 32 --policy circular` | 7 | 0 | 25/32 (78,1%) | 4,10 (externa) |
+| `example-3`, `--mode 2 --mem 64` | 4 | 1 | 64/64 (100,0%) | 15,00 (interna) |
+| `example-4`, `--mode 3 --mem 64 --page 8` | 4 | 1 | 64/64 (100,0%) | 9,38 (interna) |
+
+Os arquivos próprios (`favorece-circular`, `favorece-worst`, `misto`) e os resultados de cada um estão descritos no relatório de experimentos.
 
 ---
 
