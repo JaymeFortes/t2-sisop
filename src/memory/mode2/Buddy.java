@@ -202,6 +202,34 @@ public class Buddy implements MemoryManager {
              + "  Frag. interna total: " + internalFragmentation;
     }
 
+    /** Soma dos blocos alocados (o bloco inteiro, incluindo a sobra interna). */
+    @Override
+    public int usedMemory() {
+        List<Node> leaves = new ArrayList<>();
+        collectLeaves(root, leaves);
+        int used = 0;
+        for (Node leaf : leaves) {
+            if (leaf.id != null) {
+                used += leaf.size;
+            }
+        }
+        return used;
+    }
+
+    /** Fragmentação interna total: soma de (bloco - pedido) dos blocos alocados. */
+    @Override
+    public int fragmentation() {
+        List<Node> leaves = new ArrayList<>();
+        collectLeaves(root, leaves);
+        int total = 0;
+        for (Node leaf : leaves) {
+            if (leaf.id != null) {
+                total += leaf.size - leaf.requested;
+            }
+        }
+        return total;
+    }
+
     /** Folhas em ordem de endereço (esquerda antes da direita). */
     private void collectLeaves(Node node, List<Node> leaves) {
         if (node.isSplit()) {

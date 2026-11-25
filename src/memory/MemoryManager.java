@@ -26,6 +26,18 @@ public interface MemoryManager {
     /** Estado da memória já formatado; cada linha começa com dois espaços. */
     String state();
 
+    /** Memória ocupada agora, em posições (usada para a ocupação máxima do resumo). */
+    int usedMemory();
+
+    /**
+     * Fragmentação agora, em posições (usada para a fragmentação média do resumo).
+     * Modos 2 e 3: fragmentação interna total. Modo 1: fragmentação externa.
+     */
+    int fragmentation();
+
+    /** Tipo de fragmentação medida por fragmentation(): "interna" ou "externa". */
+    default String fragmentationType() { return "interna"; }
+
     /**
      * Avisa qual processo está envolvido no comando da linha atual.
      * Chamado pelo Simulator antes de qualquer validação. Só o modo 3 usa

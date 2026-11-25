@@ -94,6 +94,7 @@ public class Main {
             throws IOException {
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
         Simulator simulator = new Simulator(manager);
+        Statistics statistics = new Statistics(memorySize); // ocupação máxima e fragmentação média
 
         // Cabeçalho e estado inicial da memória
         System.out.println("=== Modo: " + manager.name() + " - memória " + memorySize + " ===");
@@ -119,6 +120,9 @@ public class Main {
                 Result result = simulator.execute(command);
                 System.out.println("  -> " + result.formatted());
                 System.out.println(manager.state());
+
+                // Anota a memória depois desta linha para o resumo final
+                statistics.record(manager.usedMemory(), manager.fragmentation());
             }
 
             // Passo a passo: espera o Enter antes da próxima linha
@@ -130,11 +134,14 @@ public class Main {
             }
         }
 
-        // Resumo parcial (ocupação máxima e fragmentação média entram na Etapa 5)
+        // Resumo final (seção 8 do enunciado)
         System.out.println();
         System.out.println("=== RESUMO ===");
         System.out.println("Processos admitidos:            " + simulator.admitted());
         System.out.println("Rejeitados por falta de espaço: " + simulator.rejected());
+        System.out.println("Ocupação máxima:                " + statistics.formattedMaxOccupation());
+        System.out.println("Fragmentação média:             "
+                + statistics.formattedAverageFragmentation(manager.fragmentationType()));
     }
 
     // ------------------------------------------------------------------

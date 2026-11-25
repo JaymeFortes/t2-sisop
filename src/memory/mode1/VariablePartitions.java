@@ -160,6 +160,42 @@ public class VariablePartitions implements MemoryManager {
         return -1;
     }
 
+    /** Soma das partições ocupadas. */
+    @Override
+    public int usedMemory() {
+        int used = 0;
+        for (Block b : blocks) {
+            if (!b.isFree()) {
+                used += b.size;
+            }
+        }
+        return used;
+    }
+
+    /**
+     * Fragmentação externa: memória livre que está FORA do maior bloco livre
+     * (total livre - maior bloco livre). É o espaço que existe mas está picado,
+     * sem servir para um processo do tamanho do total livre. Zero quando todo o
+     * espaço livre está num bloco só.
+     */
+    @Override
+    public int fragmentation() {
+        int totalFree = 0;
+        int largestFree = 0;
+        for (Block b : blocks) {
+            if (b.isFree()) {
+                totalFree += b.size;
+                largestFree = Math.max(largestFree, b.size);
+            }
+        }
+        return totalFree - largestFree;
+    }
+
+    @Override
+    public String fragmentationType() {
+        return "externa";
+    }
+
     @Override
     public String state() {
         List<String> regions = new ArrayList<>();

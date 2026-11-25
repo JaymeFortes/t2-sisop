@@ -158,12 +158,7 @@ public class Paging implements MemoryManager {
         String freeText = free.isEmpty() ? "nenhum" : joinNumbers(free, ", ");
         String freeCount = free.size() + (free.size() == 1 ? " frame" : " frames");
 
-        // Fragmentação interna: sobra da última página de cada processo
-        int internalFragmentation = 0;
-        for (Map.Entry<String, Integer> entry : sizes.entrySet()) {
-            int pages = pageTables.get(entry.getKey()).size();
-            internalFragmentation += pages * pageSize - entry.getValue();
-        }
+        int internalFragmentation = fragmentation();
 
         StringBuilder text = new StringBuilder();
         text.append("  Frames:  ").append(String.join(" ", map)).append("\n");
@@ -183,6 +178,23 @@ public class Paging implements MemoryManager {
 
         text.append("  Frag. interna total: ").append(internalFragmentation);
         return text.toString();
+    }
+
+    /** Frames ocupados x tamanho da página (o frame inteiro conta, mesmo com sobra). */
+    @Override
+    public int usedMemory() {
+        return (frameCount - freeFrames().size()) * pageSize;
+    }
+
+    /** Fragmentação interna total: sobra da última página de cada processo. */
+    @Override
+    public int fragmentation() {
+        int total = 0;
+        for (Map.Entry<String, Integer> entry : sizes.entrySet()) {
+            int pages = pageTables.get(entry.getKey()).size();
+            total += pages * pageSize - entry.getValue();
+        }
+        return total;
     }
 
     /** Junta uma lista de números com o separador dado: [0, 1, 2] -> "0, 1, 2". */
