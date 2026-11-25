@@ -27,7 +27,21 @@ javac -version
 
 ---
 
-## Como compilar
+## Início rápido no Windows
+
+Na raiz do projeto, rode no PowerShell:
+
+```powershell
+.\start
+```
+
+O atalho compila com `--release 17` e abre o simulador em modo interativo. Ele usa `oracleJdk-27` se a pasta estiver disponível ou procura o JDK no `PATH`.
+
+Para testar as partições variáveis, informe `1` para o modo, `32` para a memória, `1` para Worst-Fit ou `2` para Circular-Fit, `example-1` para o arquivo e `n` para rodar sem pausas. Use `s` se quiser avançar com Enter. Para os testes próprios, use `teste1`, `teste2` ou `teste3` com memória `64`.
+
+Use `.\run.cmd` para rodar o caso configurado em `run.ps1`.
+
+## Como compilar manualmente
 
 Dentro da pasta do projeto (a que contém `src/` e `tests/`).
 
@@ -45,7 +59,12 @@ rm -rf out
 javac -encoding UTF-8 --release 17 -d out $(find src -name "*.java")
 ```
 
-No **PowerShell**, troque a primeira linha por `Remove-Item -Recurse -Force out`.
+**Windows (PowerShell):**
+
+```powershell
+$fontes = (Get-ChildItem -Path src -Recurse -File -Filter '*.java').FullName
+javac -encoding UTF-8 --release 17 -d out $fontes
+```
 
 Se o `javac` não imprimir nada, a compilação deu certo. Apagar a pasta `out` antes evita rodar, sem perceber, uma versão antiga compilada.
 
@@ -61,10 +80,10 @@ Qualquer parâmetro que não for passado por argumento é **perguntado no termin
 
 | Parâmetro | Regra |
 |---|---|
-| `arquivo` | caminho do arquivo de requisições |
+| `arquivo` | caminho de um arquivo legível, ou nome curto em `tests/`, como `teste1` ou `teste1.txt` |
 | `--mode` | `1` (partições variáveis), `2` (buddy) ou `3` (paginação) |
 | `--mem` | tamanho da memória; obrigatório; **potência de 2** |
-| `--policy` | só no modo 1: `worst` ou `circular` |
+| `--policy` | no modo 1, use `worst` ou `circular` por argumento. No terminal interativo, digite `1` ou `2`, respectivamente. |
 | `--page` | só no modo 3: **potência de 2** e **≤ tamanho da memória** |
 | `--step` / `--continuous` | passo a passo (espera Enter a cada linha) ou contínuo |
 
@@ -93,7 +112,7 @@ Um comando por linha (linhas em branco são ignoradas):
 | `OUT(ID)` | libera toda a memória do processo `ID` |
 | `ACC(ID, endereço)` | só no modo 3: acessa o endereço lógico do processo `ID`; nos modos 1 e 2 é ignorado com aviso |
 
-O `ID` pode ser número ou letra (`IN(12, 8)` e `IN(A, 8)` funcionam). Linhas que não seguem esse formato aparecem como `LINHA INVÁLIDA (ignorada)` e a execução continua.
+O `ID` pode ser número ou letra (`IN(12, 8)` e `IN(A, 8)` funcionam). Linhas que não seguem esse formato aparecem como `LINHA INVÁLIDA (ignorada)`. O simulador mostra o estado da memória e segue para a próxima linha.
 
 ### Mensagens de erro
 
@@ -104,7 +123,7 @@ O comando é descartado e as demais linhas continuam sendo processadas:
 | Não há espaço para o `IN` | `ESPAÇO INSUFICIENTE DE MEMÓRIA` |
 | `IN` com ID que já está na memória | `ERRO: PROCESSO JÁ EXISTE` |
 | `OUT` ou `ACC` com ID que não está na memória | `ERRO: PROCESSO NÃO ENCONTRADO` |
-| `ACC` com endereço ≥ tamanho do processo | `ERRO: ENDEREÇO INVÁLIDO` |
+| `ACC` com endereço negativo ou ≥ tamanho do processo | `ERRO: ENDEREÇO INVÁLIDO` |
 
 Um processo rejeitado por falta de espaço não é admitido; um `OUT` posterior para ele resulta em `ERRO: PROCESSO NÃO ENCONTRADO`.
 
@@ -148,7 +167,7 @@ Um bloco ocupado aparece como `ID(pedido/bloco)`. A fragmentação interna é a 
   Frag. interna total: 11
 ```
 
-`Frames` mostra o dono de cada frame (`-` = livre). A tabela de páginas exibida é a do processo envolvido no comando. A fragmentação interna é a sobra da última página de cada processo.
+`Frames` mostra o dono de cada frame (`-` = livre). A saída mostra a tabela de páginas do processo envolvido quando ela existe. Em uma liberação bem-sucedida, aparece por exemplo `Tabela A: liberada`. A fragmentação interna é a sobra da última página de cada processo.
 
 **Resumo final**
 
@@ -163,7 +182,7 @@ Fragmentação média:             4,10 posições (externa)
 ```
 
 - **Ocupação máxima:** maior quantidade de memória ocupada ao longo da execução. No buddy e na paginação conta o bloco/frame inteiro, porque a sobra interna também fica reservada.
-- **Fragmentação média:** média, entre todas as linhas executadas (inclusive as que deram erro), da fragmentação naquele momento:
+- **Fragmentação média:** média da fragmentação medida após cada comando reconhecido, inclusive os que deram erro. Linhas vazias e malformadas ficam fora da média.
   - modos 2 e 3: fragmentação **interna** total;
   - modo 1: fragmentação **externa**, medida como `total livre − maior bloco livre` (o espaço livre que existe, mas está picado em blocos menores que o maior).
 
@@ -187,9 +206,9 @@ tests/
   example-1.txt                 exemplo do enunciado, modo 1 (seção 5.2)
   example-3.txt                 exemplo do enunciado, modo 2 (seção 6.1)
   example-4.txt                 exemplo do enunciado, modo 3 (seção 7.1)
-  favorece-circular.txt         26 linhas: sequência em que o Circular-Fit rejeita menos que o Worst-Fit
-  favorece-worst.txt            26 linhas: sequência em que o Worst-Fit rejeita menos que o Circular-Fit
-  misto.txt                     27 linhas: tamanhos variados, ACC, todos os tipos de erro (usado nos 3 modos)
+  teste1.txt                    26 linhas: sequência em que o Circular-Fit rejeita menos que o Worst-Fit
+  teste2.txt                    26 linhas: sequência em que o Worst-Fit rejeita menos que o Circular-Fit
+  teste3.txt                    27 linhas: tamanhos variados, ACC, todos os tipos de erro (usado nos 3 modos)
   invalid.txt                   linhas válidas e inválidas misturadas
   errors.txt                    ID repetido, OUT/ACC de inexistente, endereço inválido
   test.txt                      pedido maior que a memória (caso de borda)
@@ -224,11 +243,13 @@ Resumo esperado de cada exemplo:
 | `example-3`, `--mode 2 --mem 64` | 4 | 1 | 64/64 (100,0%) | 15,00 (interna) |
 | `example-4`, `--mode 3 --mem 64 --page 8` | 4 | 1 | 64/64 (100,0%) | 9,38 (interna) |
 
-Os arquivos próprios (`favorece-circular`, `favorece-worst`, `misto`) e os resultados de cada um estão descritos no relatório de experimentos.
+Os resultados dos testes próprios (`teste1.txt`, `teste2.txt`, `teste3.txt`) estão em [processo.md](processo.md). O relatório de experimentos e o manual em PDF ainda estão pendentes.
 
 ---
 
 ## Uso de inteligência artificial
+
+O Codex (OpenAI) também auxiliou na validação contra o enunciado, na revisão da documentação e nos ajustes de execução pelo terminal. Registrem o uso de IA no relatório conforme a seção 12 do enunciado.
 
 Conforme a seção 12 do enunciado (Integridade acadêmica), declaramos que este trabalho contou com o apoio de ferramentas de IA — **Claude (Anthropic)**, incluindo o **Claude Code** — nas seguintes atividades:
 

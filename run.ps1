@@ -9,7 +9,7 @@ $Casos = @{
     circular      = @('tests/example-1.txt', '--mode', '1', '--mem', '32', '--policy', 'circular')
     buddy         = @('tests/example-3.txt', '--mode', '2', '--mem', '64')
     paginacao     = @('tests/example-4.txt', '--mode', '3', '--mem', '64', '--page', '8')
-    personalizado = @('tests/misto.txt', '--mode', '3', '--mem', '64', '--page', '8')
+    personalizado = @('tests/teste3.txt', '--mode', '3', '--mem', '64', '--page', '8')
 }
 
 $ErrorActionPreference = 'Stop'

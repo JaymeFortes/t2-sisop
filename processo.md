@@ -1,7 +1,7 @@
 # TP2 SISOP — Progresso e próximo passo
 
 > Documento de passagem de bastão: o que já está pronto, como rodar e o que a próxima pessoa deve fazer.
-> Segue as etapas do `PLANO_TP2.md`. Última atualização: 25/11/2026 (Etapas 5 e 6 concluídas).
+> Segue as etapas do [plano.md](plano.md). Atualizado em 25/11/2026 com o fluxo interativo e os testes próprios renomeados.
 
 ---
 
@@ -15,10 +15,10 @@
 | 3 — Modo 2: buddy (2,5 pts) | ✅ Pronto e validado com o teste #3 |
 | 4 — Modo 3: paginação (2,0 pts) | ✅ Pronto e validado com o teste #4 |
 | 5 — Visualização e resumo (1,0 pt) | ✅ Estado por linha nos 3 modos + resumo completo (admitidos, rejeitados, ocupação máxima, fragmentação média) |
-| 6 — Arquivos de teste | ✅ 3 arquivos próprios (26–27 linhas, com rejeições e erros) + 3 exemplos do PDF + testes de borda |
-| 7 — Relatório de experimentos (1,0 pt) | ⬜ **próximo passo** (todos os números já coletados, ver abaixo) |
-| 8 — Manual do usuário (0,5 pt) | ⬜ README pronto serve de base |
-| 9 — Fechamento e entrega | ⬜ |
+| 6 — Arquivos de teste | ✅ `teste1.txt`, `teste2.txt` e `teste3.txt` (26–27 linhas, com rejeições e erros), exemplos do PDF e casos de borda |
+| 7 — Relatório de experimentos (1,0 pt) | ⬜ Dados iniciais coletados. Falta analisar e escrever o PDF. |
+| 8 — Manual do usuário (0,5 pt) | ⬜ Gerar o PDF a partir do README. |
+| 9 — Fechamento e entrega | ⬜ Rodar a revisão final, preparar o ZIP e organizar a apresentação. |
 
 ---
 
@@ -53,9 +53,9 @@ tests/
   example-1.txt                teste #1 do enunciado (golden test do modo 1)
   example-3.txt                teste #3 do enunciado (golden test do modo 2)
   example-4.txt                teste #4 do enunciado (golden test do modo 3)
-  favorece-circular.txt        26 linhas: sequência em que o Circular-Fit rejeita menos
-  favorece-worst.txt           26 linhas: sequência em que o Worst-Fit rejeita menos
-  misto.txt                    27 linhas: todos os modos, todos os erros, 3 tamanhos de página
+  teste1.txt                   26 linhas: sequência em que o Circular-Fit rejeita menos
+  teste2.txt                   26 linhas: sequência em que o Worst-Fit rejeita menos
+  teste3.txt                   27 linhas: todos os modos, todos os erros, 3 tamanhos de página
   test.txt                     caso de borda: IN maior que a memória
   invalid.txt                  linhas válidas e inválidas misturadas (testa o Parser)
   errors.txt                   ID repetido, OUT/ACC de inexistente, endereço inválido
@@ -71,14 +71,15 @@ linha do arquivo -> Parser -> Command -> Simulator -> MemoryManager (modo) -> Re
   - `parseArgs` transforma os argumentos num `Map` (`--mode 1` → `mode=1`; `--step` é flag; argumento solto = arquivo).
   - `ask` valida o valor: se veio por argumento e é inválido, encerra com erro; se veio do teclado, pergunta de novo.
   - Memória e página precisam ser **potência de 2** (`n > 0 && (n & (n - 1)) == 0`); a página também precisa ser **≤ memória**.
-  - Política só é pedida no modo 1; página só no modo 3.
+  - O modo 1 pede `1` para Worst-Fit ou `2` para Circular-Fit. O modo 3 pede o tamanho da página.
+  - A entrada aceita caminhos explícitos e nomes curtos da pasta `tests/`.
   - Um `switch` cria o gerenciador do modo escolhido. **Ao implementar um modo novo, o `Main` não muda.**
   - Passo a passo espera o Enter a cada linha (um único `BufferedReader` para teclado).
 - **`Parser`**: reconhece `IN(id,tam)`, `OUT(id)` e `ACC(id,end)`. Linha que não bate devolve `null`, e o `Main` imprime `LINHA INVÁLIDA (ignorada)` sem parar. O ID é **texto** (aceita `A` e `12`). `IN` com tamanho 0 é inválido.
 - **`Simulator`**: guarda os processos admitidos (`Map` id → tamanho) e responde aos erros **comuns aos três modos**:
   - `ERRO: PROCESSO JÁ EXISTE` (IN de ID existente)
   - `ERRO: PROCESSO NÃO ENCONTRADO` (OUT/ACC de ID inexistente)
-  - `ERRO: ENDEREÇO INVÁLIDO` (ACC com endereço ≥ tamanho)
+  - `ERRO: ENDEREÇO INVÁLIDO` (ACC com endereço negativo ou ≥ tamanho)
   - nos modos 1 e 2, o ACC vira `AVISO: ACC ignorado neste modo`
   - processo rejeitado por falta de espaço **não entra** no `Map` (um OUT depois dá "não encontrado")
   - conta admitidos e rejeitados para o resumo
@@ -122,28 +123,23 @@ linha do arquivo -> Parser -> Command -> Simulator -> MemoryManager (modo) -> Re
 - **OUT**: libera todos os frames da tabela do processo.
 - **ACC**: página = `address / pageSize`, deslocamento = `address % pageSize`, físico = `frame * pageSize + deslocamento`. Não valida nada: o `Simulator` já checou ID e endereço.
 - **Frag. interna**: soma de `páginas * pageSize - tamanho` de cada processo.
-- **Tabela no estado**: o `Simulator` chama `manager.setInvolved(id)` no início de cada comando (método `default` vazio na interface; só o modo 3 usa). O estado mostra a tabela desse processo se ele estiver na memória, **inclusive quando a linha deu erro** (ex.: `ACC(A,22)`, `IN` com ID repetido). A referência é limpa depois de cada `state()`.
+- **Tabela no estado**: o `Simulator` chama `manager.setInvolved(id)` no início de cada comando (método `default` vazio na interface; só o modo 3 usa). O estado mostra a tabela desse processo se ele estiver na memória, **inclusive quando a linha deu erro** (ex.: `ACC(A,22)`, `IN` com ID repetido). Após `OUT`, o estado mostra que a tabela foi liberada. A referência é limpa depois de cada `state()`.
 - **Validação**: o teste #4 bate linha por linha (`ACC(B,8)` → físico 32; `ACC(A,22)` → endereço inválido; último `C` em frames 0, 1, 2, 7).
 - **Dado já coletado para o relatório** (mesmo `example-4.txt`, memória 64): página 8 → 8 frames, 1 rejeitado, frag. final 9; página 32 → 2 frames, 2 rejeitados, frag. final 25.
 
 ### Resumo final (`Statistics`)
 
 - Cada modo informa `usedMemory()` (modo 1: soma das partições; modo 2: soma dos blocos alocados inteiros; modo 3: frames ocupados × página) e `fragmentation()` (modos 2 e 3: interna total; modo 1: **externa = total livre − maior bloco livre**).
-- O `Main` chama `statistics.record(...)` depois de **cada comando executado, inclusive os que deram erro** (a memória continua ocupada naquela linha). Linhas inválidas e em branco ficam de fora.
+- O `Main` chama `statistics.record(...)` depois de **cada comando executado, inclusive os que deram erro** (a memória continua ocupada naquela linha). Linhas malformadas aparecem com o estado da memória e ficam fora da média. Linhas em branco são ignoradas.
 - Resumo: `Ocupação máxima: 25/32 (78,1%)` e `Fragmentação média: 4,10 posições (externa)` (formato brasileiro, com vírgula).
 
 ---
 
-## Como compilar e rodar (Windows, cmd)
+## Como compilar e rodar no Windows
 
-Salve todos os arquivos antes (Ctrl+K, S no VS Code). **Sempre apague `out` antes**: se o `javac` falhar, o `java` rodaria os `.class` antigos sem avisar.
+No PowerShell, rode `.\start` na raiz. O atalho compila e abre o simulador para escolher modo, memória, política ou página conforme o modo, arquivo e execução. Para testar as duas políticas, rode com `teste1` ou `teste2`, modo `1`, memória `64` e alterne entre `1` e `2` na pergunta da política.
 
-```
-rmdir /s /q out          (no PowerShell: Remove-Item -Recurse -Force out)
-javac -encoding UTF-8 --release 17 -d out src\memory\*.java src\memory\mode1\*.java src\memory\mode2\*.java src\memory\mode3\*.java
-```
-
-Se o `javac` não imprimir nada, compilou. Exemplos de execução:
+O atalho `.\run.cmd` compila e executa o caso selecionado em `run.ps1`. Para compilar manualmente, veja o [README.md](README.md). Exemplos com argumentos:
 
 ```
 java -cp out memory.Main tests\example-1.txt --mode 1 --mem 32 --policy worst --continuous
@@ -176,16 +172,16 @@ PDF de **3 a 5 páginas** (seção 9 do enunciado). Todos os números abaixo já
 
 | Arquivo | Política | Admitidos | Rejeitados | Ocupação máx. | Frag. externa média |
 |---|---|---|---|---|---|
-| favorece-circular | Worst-Fit | 7 | 7 | 64/64 (100,0%) | 1,56 |
-| favorece-circular | Circular-Fit | 11 | 3 | 59/64 (92,2%) | 2,36 |
-| favorece-worst | Worst-Fit | 12 | 4 | 60/64 (93,8%) | 4,68 |
-| favorece-worst | Circular-Fit | 8 | 8 | 60/64 (93,8%) | 2,32 |
-| misto | Worst-Fit | 9 | 3 | 55/64 (85,9%) | 4,12 |
-| misto | Circular-Fit | 9 | 3 | 55/64 (85,9%) | 3,08 |
+| teste1 | Worst-Fit | 7 | 7 | 64/64 (100,0%) | 1,56 |
+| teste1 | Circular-Fit | 11 | 3 | 59/64 (92,2%) | 2,36 |
+| teste2 | Worst-Fit | 12 | 4 | 60/64 (93,8%) | 4,68 |
+| teste2 | Circular-Fit | 8 | 8 | 60/64 (93,8%) | 2,32 |
+| teste3 | Worst-Fit | 9 | 3 | 55/64 (85,9%) | 4,12 |
+| teste3 | Circular-Fit | 9 | 3 | 55/64 (85,9%) | 3,08 |
 
-**Buddy × partições variáveis (item 3)** — `misto.txt`: buddy 7 admitidos, 5 rejeitados, frag. interna média 15,35; partições 9 admitidos, 3 rejeitados, frag. externa média 4,12 (worst) / 3,08 (circular). No example-3 o buddy chega a 100% de ocupação com só 40 posições pedidas (24 de fragmentação interna).
+**Buddy × partições variáveis (item 3)** — `teste3.txt`: buddy 7 admitidos, 5 rejeitados, frag. interna média 15,35; partições 9 admitidos, 3 rejeitados, frag. externa média 4,12 (worst) / 3,08 (circular). No example-3 o buddy chega a 100% de ocupação com só 40 posições pedidas (24 de fragmentação interna).
 
-**Efeito do tamanho da página (item 4)** — `misto.txt`:
+**Efeito do tamanho da página (item 4)** — `teste3.txt`:
 
 | Página | Frames (= linhas máx. da tabela) | Admitidos | Rejeitados | Frag. interna média |
 |---|---|---|---|---|
@@ -210,7 +206,8 @@ Depois: **Etapa 8** (manual em PDF — o README já cobre quase tudo) e **Etapa 
 
 ## Checklist rápido para quem pegar agora
 
-- [ ] Ler as etapas 7–9 do `PLANO_TP2.md` e a seção 9 do enunciado
+- [ ] Conferir as etapas 7–9 do [plano.md](plano.md) e a seção 9 do enunciado
 - [ ] Compilar e rodar os 4 golden tests (`example-1` nas duas políticas, `example-3`, `example-4`) para ver tudo funcionando
-- [ ] Escrever o relatório (Etapa 7) com os dados acima e gerar o PDF
+- [ ] Escrever o relatório (Etapa 7) com os dados acima, registrar o uso de IA e gerar o PDF
+- [ ] Gerar o manual em PDF e incluir os PDFs, o código e a pasta `tests/` no ZIP
 - [ ] Commit com mensagem clara e atualizar este arquivo

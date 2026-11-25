@@ -15,7 +15,7 @@ Roteiro dividido em etapas para o grupo (3 integrantes) construir a ferramenta, 
     - rodar: `java -cp out memory.Main`
     - (opcional) empacotar: `jar cfe TP2.jar memory.Main -C out .` → roda com `java -jar TP2.jar`
 - [x] **Idioma do código: inglês.** ✔ Nomes de classes, métodos, variáveis, pacotes e pastas em **inglês**; **comentários e documentação** (Javadoc, README, manual, relatório) em **português**. A **saída impressa** continua em português, porque as mensagens de erro do enunciado precisam ser idênticas.
-- [x] **Interface: linha de comando (CLI).** ✔ Parâmetros por argumento ou perguntados no terminal. Sem GUI.
+- [x] **Interface por linha de comando.** Use `.\start` no PowerShell para compilar e escolher os parâmetros no terminal. Use `.\run.cmd` para executar o caso configurado em `run.ps1`.
 - [x] **Repositório Git criado.** ✔ Integrantes: Jayme Fortes, Rodrigo Gagliardi e Lucca Marques.
 - [x] **Formato de saída definido.** ✔ Ver a seção **Formato de saída** logo abaixo.
 
@@ -37,7 +37,7 @@ O enunciado não fixa um layout, só o **conteúdo mínimo** de cada linha (Etap
 - Intervalos de endereço sempre como `[início-fim]`, **com os dois extremos incluídos**.
 - No mapa, região livre aparece como `livre(tam)` e região ocupada como `ID(tam)`.
 - O bloco `[00] início` mostra o estado antes da primeira linha.
-- Linha que não é comando válido: `  -> LINHA INVÁLIDA (ignorada)`.
+- Linha malformada exibe `  -> LINHA INVÁLIDA (ignorada)` e o estado atual da memória. Linhas em branco são ignoradas.
 - Fora os acentos das mensagens obrigatórias, usar **só símbolos ASCII** (`->`, `|`, `-`): setas e pontos Unicode viram `?` no terminal do Windows.
 - O mapa é uma **lista de regiões**, e não uma barra `|AAAA|....|`, porque a lista funciona com memória de qualquer tamanho e com ID de mais de um caractere (ex.: `12`).
 
@@ -122,9 +122,9 @@ Tudo que os três modos compartilham. Faça primeiro — é a fundação.
 - [x] **Parâmetros em tempo de execução** (perguntar ao usuário ou receber por argumento):
   - Modo: `1` (partições variáveis), `2` (buddy) ou `3` (paginação).
   - Tamanho da memória: **obrigatório**, **potência de 2** (validar!).
-  - Política (**só modo 1**): `Worst-Fit` ou `Circular-Fit`.
+  - Política (**só modo 1**): `1` para Worst-Fit ou `2` para Circular-Fit no terminal interativo. Por argumento, use `--policy worst` ou `--policy circular`.
   - Tamanho da página (**só modo 3**): potência de 2, **≤ tamanho da memória**. Nº de frames = memória ÷ página.
-  - Caminho do arquivo de requisições.
+  - Caminho do arquivo de requisições ou nome curto em `tests/`, como `teste1`.
   - Modo de execução: **passo a passo** (espera Enter a cada linha) ou **contínuo** (roda tudo).
 - [x] **Parser do arquivo de requisições.** Um comando por linha:
   - `IN(ID, tamanho)` — aloca `tamanho` posições para o processo `ID` (guardado como **texto**, para aceitar `A` dos exemplos e `12`).
@@ -138,7 +138,7 @@ Tudo que os três modos compartilham. Faça primeiro — é a fundação.
   | Sem espaço para o `IN` | `ESPAÇO INSUFICIENTE DE MEMÓRIA` |
   | `IN` com ID que já existe | `ERRO: PROCESSO JÁ EXISTE` |
   | `OUT`/`ACC` com ID inexistente | `ERRO: PROCESSO NÃO ENCONTRADO` |
-  | `ACC` com endereço ≥ tamanho do processo | `ERRO: ENDEREÇO INVÁLIDO` |
+  | `ACC` com endereço negativo ou ≥ tamanho do processo | `ERRO: ENDEREÇO INVÁLIDO` |
 
   > ⚠️ Processo **rejeitado por falta de espaço não é admitido** → um `OUT` posterior para ele dá `PROCESSO NÃO ENCONTRADO`. Escreva as mensagens **exatamente** como acima (acentos inclusos) — o professor testa com arquivo próprio.
 - [x] **Interface comum entre os modos (Java).** Uma `interface MemoryManager` que os três modos implementam — assim o laço principal (ler linha → chamar método → imprimir) é **o mesmo** para os três (polimorfismo). Os erros comuns (ID repetido, ID inexistente, endereço inválido) ficam centralizados na classe `Simulator`, e cada modo só cuida da alocação:
@@ -168,7 +168,7 @@ src/memory/
   mode2/Buddy.java
   mode3/Paging.java
   Statistics.java            // ocupação máxima e fragmentação média do resumo
-tests/                       // example-1, -3, -4 = exemplos do enunciado; favorece-*, misto = próprios
+tests/                       // example-1, -3, -4 = exemplos do enunciado; teste1, teste2, teste3 = próprios
 ```
 
 **Entregável da etapa:** `Main` lê os parâmetros, lê o arquivo, despacha cada linha para um gerenciador (ainda vazio) e imprime os erros corretamente.
@@ -228,7 +228,7 @@ Memória dividida em **frames** de tamanho fixo (= tamanho da página). Cada pro
 - [x] `OUT`: liberar **todos** os frames do processo.
 - [x] `ACC(id, endereço)`:
   - `página = endereço ÷ tamanho_página` · `deslocamento = endereço mod tamanho_página`
-  - validar `endereço < tamanho do processo` (senão `ERRO: ENDEREÇO INVÁLIDO`)
+  - validar `0 <= endereço < tamanho do processo` (senão `ERRO: ENDEREÇO INVÁLIDO`)
   - consultar a tabela → **frame**, e **endereço físico = frame × tamanho_página + deslocamento**.
 
 **Validação:** golden test #4 (memória 64, página 8 → 8 frames). Conferir frames atribuídos, a tradução `ACC(B,8)→físico 32`, o `ERRO: ENDEREÇO INVÁLIDO` do `ACC(A,22)`, e a realocação não-contígua do `C` após `OUT(A)`.
@@ -260,26 +260,26 @@ Ao **fim da execução**, um **resumo**:
   - casos de **erro de comando** (ID repetido, OUT de inexistente, ACC inválido);
   - um arquivo que **favoreça o Circular-Fit** e outro que **favoreça o Worst-Fit** (para a comparação do relatório).
 - [x] Guardar os 3 exemplos do enunciado (`example-1`, `example-3`, `example-4`) como arquivos de **regressão** (devem sempre bater).
-- [x] Os arquivos acompanham o código no .zip: `favorece-circular.txt`, `favorece-worst.txt`, `misto.txt` (26–27 linhas cada).
+- [x] Testes próprios na pasta `tests/`: `teste1.txt` (26 linhas, menos rejeições no Circular-Fit), `teste2.txt` (26 linhas, menos rejeições no Worst-Fit) e `teste3.txt` (27 linhas, carga mista).
 
 ---
 
 ## Etapa 7 — Relatório de experimentos (1,0 pt) — PDF, 3 a 5 páginas ▶ próximo passo
 
-Rodar os experimentos e escrever. Conteúdo obrigatório:
+Os resultados iniciais já estão em [processo.md](processo.md). Falta analisar os dados e escrever o relatório.
 1. [ ] **Arquivos de teste** usados (descrever cada um).
 2. [ ] **Worst-Fit × Circular-Fit:** mesmos arquivos nas duas políticas → comparar **rejeições** e **fragmentação externa**.
 3. [ ] **Buddy × partições variáveis:** discutir o trade-off **fragmentação interna × externa** e a facilidade de **fusão de blocos**.
 4. [ ] **Efeito do tamanho da página:** rodar o modo 3 com **≥ 3 tamanhos de página** no mesmo arquivo → impacto na **fragmentação interna** e no **tamanho das tabelas de páginas**.
 5. [ ] **Conclusões:** qual abordagem recomendar para cada carga — **muitos processos pequenos**, **poucos grandes**, **tamanhos variados** — justificando **com os dados**.
 
-> Dica: faça o simulador cuspir os números do resumo em cada rodada; o relatório vira quase que só montar tabelas e comentar.
+- [ ] Citar no relatório os trechos de terceiros ou gerados por IA usados no trabalho, conforme a seção 12 do enunciado.
 
 ---
 
 ## Etapa 8 — Manual do usuário (0,5 pt) + organização do código
 
-- [ ] **Manual (PDF):** versão do **JDK** usada; como **compilar** (`javac -encoding UTF-8 --release 17 -d out $(find src -name "*.java")`) e **executar** (`java -cp out memory.Main`); formato do arquivo de requisições; exemplos de uso dos 3 modos; significado das saídas.
+- [ ] **Manual (PDF):** versão do **JDK** usada; atalho `.\start` no Windows; como **compilar** (`javac -encoding UTF-8 --release 17 -d out $(find src -name "*.java")`) e **executar** (`java -cp out memory.Main`); formato do arquivo de requisições; exemplos de uso dos 3 modos; significado das saídas.
 - [x] **Código organizado:** separar por pacote (`Parser`, `mode1`, `mode2`, `mode3`, `Statistics`, `Main`) conforme a estrutura da Etapa 1. Nomes claros, Javadoc/comentários nos pontos-chave.
 
 ---
