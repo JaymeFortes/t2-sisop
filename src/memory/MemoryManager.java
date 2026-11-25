@@ -1,15 +1,18 @@
 package memory;
 
-// interface que faz a ponte entre o simulador e os três modos de gerenciamento de memória
+/**
+ * Interface comum dos três modos. O Simulator já filtrou os erros comuns
+ * (ID repetido, ID inexistente, endereço inválido); cada modo só cuida da alocação.
+ */
 public interface MemoryManager {
 
-    //Nome exibido no cabeçalho, ex.: "Partições variáveis (Worst-Fit)".
+    /** Nome exibido no cabeçalho, ex.: "Partições variáveis (Worst-Fit)". */
     String name();
 
-    //tenta alocar. Devolve ok ou erro
+    /** Tenta alocar. Devolve ok ou erro(Result.NO_SPACE). O id ainda não existe. */
     Result in(String id, int size);
 
-    // Libera toda a memória do processo
+    /** Libera toda a memória do processo. O id com certeza existe. */
     Result out(String id);
 
     /** Só o modo 3 aceita ACC; nos outros o comando é ignorado com aviso. */
@@ -22,4 +25,11 @@ public interface MemoryManager {
 
     /** Estado da memória já formatado; cada linha começa com dois espaços. */
     String state();
+
+    /**
+     * Avisa qual processo está envolvido no comando da linha atual.
+     * Chamado pelo Simulator antes de qualquer validação. Só o modo 3 usa
+     * (para mostrar a tabela de páginas desse processo); os outros ignoram.
+     */
+    default void setInvolved(String id) { }
 }

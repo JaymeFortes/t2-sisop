@@ -20,8 +20,12 @@ public class Simulator {
     }
 
     public Result execute(Command command) {
+        // Avisa o modo qual processo está envolvido, antes de qualquer validação.
+        // O modo 3 usa isso para mostrar a tabela de páginas mesmo quando a linha dá erro.
+        manager.setInvolved(command.id());
+
         return switch (command.type()) {
-            case IN -> in(command.id(), command.value());
+            case IN  -> in(command.id(), command.value());
             case OUT -> out(command.id());
             case ACC -> acc(command.id(), command.value());
         };
@@ -66,15 +70,7 @@ public class Simulator {
         return manager.acc(id, address);
     }
 
-    public MemoryManager manager() {
-        return manager;
-    }
-
-    public int admitted() {
-        return admitted;
-    }
-
-    public int rejected() {
-        return rejected;
-    }
+    public MemoryManager manager() { return manager; }
+    public int admitted() { return admitted; }
+    public int rejected() { return rejected; }
 }

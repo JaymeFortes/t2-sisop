@@ -30,7 +30,7 @@ public class Paging implements MemoryManager {
     /** Tamanho pedido por cada processo (para a fragmentação interna). */
     private final Map<String, Integer> sizes = new HashMap<>();
 
-    /** Processo envolvido na última operação, para mostrar a tabela dele no estado. */
+    /** Processo do comando da linha atual (avisado pelo Simulator), para mostrar a tabela dele. */
     private String lastInvolved;
 
     public Paging(int memorySize, int pageSize) {
@@ -51,6 +51,12 @@ public class Paging implements MemoryManager {
 
     @Override
     public Result in(String id, int size) {
+        // Maior que a memória inteira nunca cabe. Testar antes da conta evita
+        // estouro de int em (size + pageSize - 1) com tamanhos enormes.
+        if (size > memorySize) {
+            return Result.error(Result.NO_SPACE);
+        }
+
         // Nº de páginas = teto(size / pageSize), feito só com inteiros
         int pagesNeeded = (size + pageSize - 1) / pageSize;
 
@@ -69,7 +75,6 @@ public class Paging implements MemoryManager {
         }
         pageTables.put(id, table);
         sizes.put(id, size);
-        lastInvolved = id;
 
         return Result.ok(id + " com " + pagesNeeded + " página" + (pagesNeeded > 1 ? "s" : "")
                 + " -> frame" + (pagesNeeded > 1 ? "s " : " ") + joinNumbers(table, ", "));
@@ -120,7 +125,6 @@ public class Paging implements MemoryManager {
         int offset = address % pageSize;
         int frame = pageTables.get(id).get(page);
         int physical = frame * pageSize + offset;
-        lastInvolved = id;
 
         return Result.ok(id + " end. lógico " + address + " = página " + page
                 + ", desloc. " + offset + " -> frame " + frame + " -> físico " + physical);
@@ -130,11 +134,17 @@ public class Paging implements MemoryManager {
     // Estado
     // ------------------------------------------------------------------
 
+    /** O Simulator avisa qual processo está envolvido em cada linha, mesmo quando a linha dá erro. */
+    @Override
+    public void setInvolved(String id) {
+        lastInvolved = id;
+    }
+
     /**
      * Mostra os frames, os livres, a tabela do processo envolvido na linha
-     * e a fragmentação interna total. A tabela é mostrada uma vez só: depois
-     * de impressa, a referência é limpa, para uma linha que nem chegou ao
-     * modo (ex.: ACC com endereço inválido) não repetir a tabela anterior.
+     * (se ele estiver na memória, inclusive quando a linha deu erro, como um
+     * ACC com endereço inválido) e a fragmentação interna total.
+     * Depois de impressa, a referência é limpa para não vazar para a próxima linha.
      */
     @Override
     public String state() {
