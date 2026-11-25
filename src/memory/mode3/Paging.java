@@ -1,11 +1,19 @@
 package memory.mode3;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import memory.MemoryManager;
 import memory.Result;
 
 /**
  * Modo 3 — Paginação simples (sem memória virtual).
- * Esqueleto: só existe para o Main compilar. A lógica entra na Etapa 4 do plano.
+ *
+ * A memória é dividida em frames de tamanho fixo (= tamanho da página).
+ * Cada processo é dividido em páginas e ganha uma tabela de páginas
+ * (página -> frame). Só é admitido se TODAS as páginas couberem.
  */
 public class Paging implements MemoryManager {
 
@@ -13,10 +21,23 @@ public class Paging implements MemoryManager {
     private final int pageSize;
     private final int frameCount;
 
+    /** frames[i] = id do processo dono do frame i, ou null se livre. */
+    private final String[] frames;
+
+    /** Tabela de páginas de cada processo: posição = nº da página, valor = nº do frame. */
+    private final Map<String, List<Integer>> pageTables = new HashMap<>();
+
+    /** Tamanho pedido por cada processo (para a fragmentação interna). */
+    private final Map<String, Integer> sizes = new HashMap<>();
+
+    /** Processo envolvido na última operação, para mostrar a tabela dele no estado. */
+    private String lastInvolved;
+
     public Paging(int memorySize, int pageSize) {
         this.memorySize = memorySize;
         this.pageSize = pageSize;
         this.frameCount = memorySize / pageSize;
+        this.frames = new String[frameCount]; // todos começam null = livres
     }
 
     @Override
@@ -24,28 +45,142 @@ public class Paging implements MemoryManager {
         return "Paginação simples (página " + pageSize + ", " + frameCount + " frames)";
     }
 
+    // ------------------------------------------------------------------
+    // IN
+    // ------------------------------------------------------------------
+
     @Override
     public Result in(String id, int size) {
-        return Result.error("NÃO IMPLEMENTADO");
+        // Nº de páginas = teto(size / pageSize), feito só com inteiros
+        int pagesNeeded = (size + pageSize - 1) / pageSize;
+
+        // Sem memória virtual: precisa haver frame livre para TODAS as páginas
+        List<Integer> freeFrames = freeFrames();
+        if (freeFrames.size() < pagesNeeded) {
+            return Result.error(Result.NO_SPACE);
+        }
+
+        // Ocupa os frames livres de menor índice (não precisam ser contíguos)
+        List<Integer> table = new ArrayList<>();
+        for (int page = 0; page < pagesNeeded; page++) {
+            int frame = freeFrames.get(page);
+            frames[frame] = id;
+            table.add(frame);
+        }
+        pageTables.put(id, table);
+        sizes.put(id, size);
+        lastInvolved = id;
+
+        return Result.ok(id + " com " + pagesNeeded + " página" + (pagesNeeded > 1 ? "s" : "")
+                + " -> frame" + (pagesNeeded > 1 ? "s " : " ") + joinNumbers(table, ", "));
     }
+
+    /** Índices dos frames livres, em ordem crescente. */
+    private List<Integer> freeFrames() {
+        List<Integer> free = new ArrayList<>();
+        for (int i = 0; i < frameCount; i++) {
+            if (frames[i] == null) {
+                free.add(i);
+            }
+        }
+        return free;
+    }
+
+    // ------------------------------------------------------------------
+    // OUT
+    // ------------------------------------------------------------------
 
     @Override
     public Result out(String id) {
-        return Result.error("NÃO IMPLEMENTADO"); // TODO Etapa 4
+        List<Integer> table = pageTables.remove(id);
+        if (table == null) {
+            return Result.error(Result.PROCESS_NOT_FOUND); // o Simulator já evita isso
+        }
+        for (int frame : table) {
+            frames[frame] = null;
+        }
+        sizes.remove(id);
+        return Result.ok(id + " liberado: frame" + (table.size() > 1 ? "s " : " ")
+                + joinNumbers(table, ", "));
     }
+
+    // ------------------------------------------------------------------
+    // ACC
+    // ------------------------------------------------------------------
 
     @Override
     public boolean supportsAcc() {
         return true; // só o modo 3 aceita ACC
     }
 
+    /** O Simulator já garantiu que o processo existe e que address < tamanho. */
     @Override
     public Result acc(String id, int address) {
-        return Result.error("NÃO IMPLEMENTADO"); // TODO Etapa 4
+        int page = address / pageSize;
+        int offset = address % pageSize;
+        int frame = pageTables.get(id).get(page);
+        int physical = frame * pageSize + offset;
+        lastInvolved = id;
+
+        return Result.ok(id + " end. lógico " + address + " = página " + page
+                + ", desloc. " + offset + " -> frame " + frame + " -> físico " + physical);
     }
 
+    // ------------------------------------------------------------------
+    // Estado
+    // ------------------------------------------------------------------
+
+    /**
+     * Mostra os frames, os livres, a tabela do processo envolvido na linha
+     * e a fragmentação interna total. A tabela é mostrada uma vez só: depois
+     * de impressa, a referência é limpa, para uma linha que nem chegou ao
+     * modo (ex.: ACC com endereço inválido) não repetir a tabela anterior.
+     */
     @Override
     public String state() {
-        return "  (modo 3 ainda não implementado - memória " + memorySize + ")";
+        // Mapa dos frames: "0:A 1:A 2:- ..."
+        List<String> map = new ArrayList<>();
+        for (int i = 0; i < frameCount; i++) {
+            map.add(i + ":" + (frames[i] == null ? "-" : frames[i]));
+        }
+
+        List<Integer> free = freeFrames();
+        String freeText = free.isEmpty() ? "nenhum" : joinNumbers(free, ", ");
+        String freeCount = free.size() + (free.size() == 1 ? " frame" : " frames");
+
+        // Fragmentação interna: sobra da última página de cada processo
+        int internalFragmentation = 0;
+        for (Map.Entry<String, Integer> entry : sizes.entrySet()) {
+            int pages = pageTables.get(entry.getKey()).size();
+            internalFragmentation += pages * pageSize - entry.getValue();
+        }
+
+        StringBuilder text = new StringBuilder();
+        text.append("  Frames:  ").append(String.join(" ", map)).append("\n");
+        text.append("  Livres:  ").append(freeText).append("   (").append(freeCount).append(")\n");
+
+        // Tabela de páginas do processo envolvido (se ele ainda estiver na memória)
+        if (lastInvolved != null && pageTables.containsKey(lastInvolved)) {
+            List<Integer> table = pageTables.get(lastInvolved);
+            List<String> entries = new ArrayList<>();
+            for (int page = 0; page < table.size(); page++) {
+                entries.add("p" + page + "->f" + table.get(page));
+            }
+            text.append("  Tabela ").append(lastInvolved).append(": ")
+                .append(String.join("  ", entries)).append("\n");
+        }
+        lastInvolved = null;
+
+        text.append("  Frag. interna total: ").append(internalFragmentation);
+        return text.toString();
+    }
+
+    /** Junta uma lista de números com o separador dado: [0, 1, 2] -> "0, 1, 2". */
+    private static String joinNumbers(List<Integer> numbers, String separator) {
+        List<String> parts = new ArrayList<>();
+        for (int n : numbers) {
+            parts.add(String.valueOf(n));
+        }
+        return String.join(separator, parts);
     }
 }
