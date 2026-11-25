@@ -49,11 +49,14 @@ public class Main {
         // 3) Parâmetros específicos de cada modo e criação do gerenciador
         MemoryManager manager = switch (mode) {
             case 1 -> {
+                boolean policyFromArgument = options.containsKey("policy");
                 String policy = ask(options, "policy",
-                        "Política (worst | circular): ",
-                        value -> value.equalsIgnoreCase("worst") || value.equalsIgnoreCase("circular"),
-                        "a política deve ser worst ou circular");
-                yield new VariablePartitions(memorySize, policy.equalsIgnoreCase("worst")
+                        "Política (worst (1) | circular (2)): ",
+                        value -> policyFromArgument
+                                ? value.equalsIgnoreCase("worst") || value.equalsIgnoreCase("circular")
+                                : value.matches("[12]"),
+                        policyFromArgument ? "a política deve ser worst ou circular" : "responda 1 ou 2");
+                yield new VariablePartitions(memorySize, policy.equals("1") || policy.equalsIgnoreCase("worst")
                         ? VariablePartitions.Policy.WORST_FIT
                         : VariablePartitions.Policy.CIRCULAR_FIT);
             }
@@ -69,7 +72,7 @@ public class Main {
 
         // 4) Arquivo de requisições
         String filePath = ask(options, "file",
-                "Arquivo de requisições: ",
+                "Arquivo de requisições (ex.: example-1): ",
                 Main::isReadableFile,
                 "arquivo não encontrado ou não é um arquivo comum");
 
@@ -86,7 +89,7 @@ public class Main {
                     "responda s ou n").equalsIgnoreCase("s");
         }
 
-        run(manager, memorySize, Path.of(filePath), stepByStep);
+        run(manager, memorySize, resolveRequestFile(filePath), stepByStep);
     }
 
     /** Laço principal: lê cada linha, executa e imprime resultado + estado. */
@@ -234,10 +237,24 @@ public class Main {
         }
     }
 
+    /** Aceita caminhos explícitos e nomes curtos dos arquivos em tests/. */
+    private static Path resolveRequestFile(String value) {
+        Path path = Path.of(value);
+        if (path.getRoot() != null || path.getParent() != null || Files.exists(path)) {
+            return path;
+        }
+
+        Path testFile = Path.of("tests", value);
+        if (!value.contains(".") && !Files.exists(testFile)) {
+            return testFile.resolveSibling(value + ".txt");
+        }
+        return testFile;
+    }
+
     /** Só aceita arquivo comum e legível (uma pasta passava em isReadable sozinho). */
     private static boolean isReadableFile(String value) {
         try {
-            Path path = Path.of(value);
+            Path path = resolveRequestFile(value);
             return Files.isRegularFile(path) && Files.isReadable(path);
         } catch (InvalidPathException e) {
             return false; // caminho com caracteres inválidos
