@@ -1,0 +1,285 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.12}
+\newcommand{\arquivo}[1]{\texttt{#1}}
+
+\begin{document}
+
+\begin{center}
+    {\small PUCRS \enspace $\cdot$ \enspace Sistemas Operacionais \enspace $\cdot$ \enspace Trabalho Prático 2}\\[6pt]
+    {\LARGE\bfseries Experimentos de gerenciamento de memória}\\[8pt]
+    Jayme Fortes, Rodrigo Gagliardi e Lucca Marques
+\end{center}
+
+\section{Arquivos de teste e método}
+
+O experimento compara partições variáveis com Worst-Fit e Circular-Fit,
+sistema buddy e paginação simples. Para observar o efeito de cada escolha,
+fixamos a memória em 64 posições, começamos cada execução com a memória
+vazia e usamos o modo contínuo. O simulador foi compilado com
+\arquivo{javac --release 17}.
+
+\begin{center}
+\captionof{table}{Arquivos próprios que acompanham o código em \arquivo{tests/}.}
+\label{tab:arquivos}
+\small
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Arquivo & Linhas & Cenário \\
+\midrule
+\arquivo{teste1.txt} & 26 & Sequência com menos rejeições no Circular-Fit \\
+\arquivo{teste2.txt} & 26 & Sequência com menos rejeições no Worst-Fit \\
+\arquivo{teste3.txt} & 27 & Carga variada com alocações, liberações e acessos \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Os três arquivos incluem pedidos rejeitados por falta de espaço, repetição
+de ID e liberação de processo inexistente. O \arquivo{teste3.txt} também
+inclui um acesso fora do intervalo do processo na paginação e uma linha
+malformada. Os exemplos distribuídos com o enunciado serviram para
+conferir o comportamento dos modos antes dos experimentos.
+
+\subsection*{Métricas}
+
+\begin{itemize}
+    \item A taxa de rejeição é o número de pedidos recusados por falta de
+    espaço dividido pela soma de pedidos admitidos e rejeitados por falta
+    de espaço. Erros de comando ficam fora desse denominador.
+    \item A ocupação máxima mede o pico de posições reservadas. No buddy
+    e na paginação, a sobra dentro de um bloco ou frame ocupado também
+    conta como memória reservada.
+    \item Nas partições variáveis, medimos a fragmentação externa como o
+    total livre menos o tamanho do maior bloco livre. No buddy e na
+    paginação, medimos a fragmentação interna como a soma das sobras
+    dentro dos blocos ou frames reservados.
+\end{itemize}
+
+O simulador calcula as médias sobre o estado após cada comando reconhecido,
+inclusive comandos que retornam erro ou aviso. Linhas vazias e malformadas
+ficam fora da média. As medidas de fragmentação são dadas em posições.
+
+\clearpage
+
+\section{Worst-Fit e Circular-Fit}
+
+Executamos os mesmos três arquivos nas duas políticas. O Worst-Fit busca
+o maior bloco que comporte o pedido. O Circular-Fit retoma a busca a partir
+do endereço seguinte à última alocação e usa o primeiro bloco adequado.
+
+\begin{center}
+\captionof{table}{Comparação das políticas de partições variáveis.}
+\label{tab:politicas}
+\small
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Arquivo & Política & Admit. & Rej. & Taxa & Pico & Frag. ext. \\
+\midrule
+\arquivo{teste1} & Worst-Fit    &  7 & 7 & 50,0\% & 64/64 & 1,56 \\
+\arquivo{teste1} & Circular-Fit & 11 & 3 & 21,4\% & 59/64 & 2,36 \\
+\arquivo{teste2} & Worst-Fit    & 12 & 4 & 25,0\% & 60/64 & 4,68 \\
+\arquivo{teste2} & Circular-Fit &  8 & 8 & 50,0\% & 60/64 & 2,32 \\
+\arquivo{teste3} & Worst-Fit    &  9 & 3 & 25,0\% & 55/64 & 4,12 \\
+\arquivo{teste3} & Circular-Fit &  9 & 3 & 25,0\% & 55/64 & 3,08 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+No \arquivo{teste1}, o Circular-Fit teve quatro rejeições a menos. No
+\arquivo{teste2}, o Worst-Fit teve quatro a menos. Em ambos, a política
+com menos rejeições teve maior fragmentação externa média. Essa média
+resume os estados observados ao longo da execução, enquanto uma admissão
+depende de haver, naquele instante, um bloco com tamanho suficiente para
+o pedido. No \arquivo{teste3}, ambas admitiram nove pedidos, e o
+Circular-Fit teve menor fragmentação externa média.
+
+\section{Buddy e partições variáveis}
+
+\begin{center}
+\captionof{table}{Resultados do buddy sobre os mesmos arquivos.}
+\label{tab:buddy}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Arquivo & Admit. & Rej. & Taxa & Pico & Frag. int. \\
+\midrule
+\arquivo{teste1} &  9 & 5 & 35,7\% & 64/64 & 7,96 \\
+\arquivo{teste2} & 10 & 6 & 37,5\% & 64/64 & 7,76 \\
+\arquivo{teste3} &  7 & 5 & 41,7\% & 64/64 & 15,35 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Nas partições variáveis, um pedido de 9 ocupa exatamente 9 posições.
+Na liberação, a partição pode ser unida a qualquer vizinho livre contíguo.
+No buddy, um pedido de 9 reserva um bloco de 16, com 7 posições de sobra.
+A fusão no buddy tem um candidato determinado pela árvore e pode se
+repetir até a raiz. Ela exige que os dois blocos sejam irmãos e estejam
+livres, mesmo quando há outros blocos livres fisicamente adjacentes.
+
+No \arquivo{teste3}, o buddy atingiu 64 posições reservadas e recusou cinco
+pedidos. Cada política de partições variáveis recusou três. Os 15,35 do
+buddy medem posições reservadas que ficaram sem uso dentro de blocos.
+Os 4,12 e 3,08 das partições variáveis medem posições livres fora do maior
+bloco livre. Cada indicador ajuda a explicar como o espaço fica
+indisponível para determinados pedidos.
+
+\clearpage
+
+\section{Efeito do tamanho da página}
+
+Executamos \arquivo{teste3.txt} com páginas de 4, 8 e 16 posições.
+Para medir o tamanho das tabelas, contamos as entradas da tabela de
+\arquivo{P2}, que pede 12 posições e é admitido nas três execuções.
+Também registramos o maior número de entradas observado em uma tabela
+individual, considerando todos os processos admitidos em cada execução.
+
+\begin{center}
+\captionof{table}{Paginação de \arquivo{teste3.txt} com memória de 64 posições.}
+\label{tab:paginas}
+\small
+\begin{tabular}{@{}rrrrrrrr@{}}
+\toprule
+Página & Frames & Admit. & Rej. & Taxa & Frag. int. & P2 & Tabela máx. \\
+\midrule
+ 4 & 16 & 8 & 4 & 33,3\% &  7,04 & 3 & 7 \\
+ 8 &  8 & 7 & 5 & 41,7\% & 13,27 & 2 & 4 \\
+16 &  4 & 6 & 6 & 50,0\% & 26,27 & 1 & 1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Com páginas de 4 posições, \arquivo{P2} usa três páginas e ocupa
+12 posições, sem sobra. Com páginas de 8 ou 16, reserva 16 posições,
+com sobra de 4, e sua tabela passa a ter duas ou uma entrada.
+Essa comparação mantém o tamanho do processo fixo. O máximo de cada
+execução também depende de quais outros processos foram admitidos.
+
+O pico foi de 64 posições nos três casos. Com páginas maiores,
+mais posições ficaram reservadas nas últimas páginas dos processos
+admitidos. Para esta carga, isso veio acompanhado de mais rejeições
+e de tabelas menores. Entre os três tamanhos, 4 posições produziram
+a menor taxa de rejeição. Uma página de 1 posição em uma rodada extra
+admitiu nove pedidos e rejeitou três, com fragmentação interna zero.
+Nesse caso, \arquivo{P2} precisou de 12 entradas e a maior tabela
+observada teve 25, o que explicita o custo em entradas por processo.
+
+\subsection*{Reprodução dos experimentos}
+
+Execute a partir da raiz do projeto, com JDK 17 ou superior. No Windows,
+\verb|.\start| compila e abre o simulador pelo PowerShell. No Linux e no
+macOS, compile e inicie a aplicação com os comandos abaixo.
+
+\begin{verbatim}
+javac -encoding UTF-8 --release 17 -d out $(find src -name '*.java')
+java -cp out memory.Main
+\end{verbatim}
+
+\textbf{Exemplo.} Para executar \arquivo{tests/teste1.txt} com Worst-Fit e
+memória de 64 posições, passe os parâmetros ao iniciar o Java:
+
+\begin{verbatim}
+java -cp out memory.Main tests/teste1.txt --mode 1 --mem 64 \
+    --policy worst --continuous
+\end{verbatim}
+
+No modo interativo, o mesmo teste usa as respostas \arquivo{1},
+\arquivo{64}, \arquivo{1}, \arquivo{tests/teste1.txt} e \arquivo{n},
+uma por vez. O resumo esperado é de 7 pedidos admitidos e 7 rejeitados
+por falta de espaço. Para rodar os demais casos no modo interativo,
+use as opções a seguir.
+
+\begin{itemize}
+    \item \textbf{Partições variáveis.} Digite \arquivo{1} para o modo,
+    \arquivo{64} para a memória, \arquivo{1} para Worst-Fit ou \arquivo{2}
+    para Circular-Fit, o arquivo (por exemplo, \arquivo{tests/teste1.txt})
+    e \arquivo{n} para execução contínua. Repita com os três arquivos.
+    \item \textbf{Buddy.} Digite \arquivo{2}, \arquivo{64}, o arquivo
+    de teste e \arquivo{n}. Repita com os três arquivos.
+    \item \textbf{Paginação.} Digite \arquivo{3}, \arquivo{64}, o tamanho
+    da página (\arquivo{4}, \arquivo{8} ou \arquivo{16}),
+    \arquivo{tests/teste3.txt} e \arquivo{n}. Repita para cada tamanho.
+\end{itemize}
+
+\clearpage
+
+\section{Recomendações por tipo de carga}
+
+Usamos memória de 64 posições nas três cargas adicionais da
+Tabela~\ref{tab:cargas}. As sequências acompanham o código em
+\arquivo{tests/}.
+
+\begin{itemize}
+    \item \arquivo{pequenos.txt} insere 20 processos de tamanho 3, libera
+    \arquivo{S2}, \arquivo{S4}, \arquivo{S6} e \arquivo{S8} e insere quatro
+    processos de tamanho 2.
+    \item \arquivo{grandes-adjacentes.txt} e \arquivo{grandes-separados.txt}
+    inserem \arquivo{L1} a \arquivo{L4}, todos de tamanho 16. O primeiro
+    libera \arquivo{L2} e \arquivo{L3}. O segundo libera \arquivo{L1} e
+    \arquivo{L3}. Ambos terminam com \arquivo{IN(L5,32)}.
+\end{itemize}
+
+Para reproduzir a tabela, siga os passos da seção anterior em modo
+contínuo com cada um desses arquivos, usando o caminho \arquivo{tests/}
+seguido do nome do arquivo. Execute as duas políticas do modo 1,
+o modo 2 e o modo 3 com páginas de 1 e de 4 posições.
+
+\begin{center}
+\captionof{table}{Admissões e rejeições por falta de espaço em cada carga adicional.}
+\label{tab:cargas}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Carga & Worst-Fit & Circular-Fit & Buddy & Pág. 1 & Pág. 4 \\
+\midrule
+Muitos pequenos   & 24/0 & 24/0 & 20/4 & 24/0 & 20/4 \\
+Grandes adjacentes &  5/0 &  5/0 &  4/1 &  5/0 &  5/0 \\
+Grandes separados  &  4/1 &  4/1 &  4/1 &  5/0 &  5/0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Muitos processos pequenos.} Recomendamos partições variáveis
+quando há blocos contíguos suficientes. As duas políticas aceitaram todos
+os 24 pedidos, com pico de 60 posições. O buddy e a paginação de 4
+posições arredondaram cada pedido de 3 para 4 e recusaram quatro pedidos.
+Se for necessário traduzir endereços, a paginação de 1 posição também
+aceitou os 24, com uma entrada de tabela por posição.
+
+\textbf{Poucos processos grandes.} Recomendamos paginação quando as
+liberações tendem a deixar regiões separadas. Com páginas de 4, o pedido
+de 32 coube nos dois cenários, sem fragmentação interna para esses
+tamanhos. Com blocos adjacentes, ambas as políticas de partições variáveis
+também atenderam ao pedido. O buddy recusou porque os dois blocos livres
+de 16 pertenciam a pais diferentes na árvore e não podiam formar um
+bloco buddy de 32.
+
+\textbf{Tamanhos variados.} Para uma carga semelhante ao
+\arquivo{teste3.txt}, recomendamos Circular-Fit quando a alocação precisa
+ser contígua. Em relação ao Worst-Fit, manteve as três rejeições e reduziu
+a fragmentação externa média de 4,12 para 3,08. Se a tradução de endereços
+for necessária, páginas de 4 posições oferecem um ponto de partida para
+equilibrar rejeições e tamanho das tabelas. Entre as páginas de 4, 8 e 16,
+esse tamanho teve a menor taxa de rejeição. Os resultados opostos de
+\arquivo{teste1} e \arquivo{teste2} mostram por que a escolha da política
+deve ser validada com a carga esperada.
+
+\subsection*{Uso de inteligência artificial}
+
+O grupo usou Claude e Claude Code (Anthropic) no planejamento, na elaboração
+de partes do código Java e na revisão. Ele também apoiou em ajustes na
+interface de terminal, na validação do simulador e na redação deste relatório. As ferramentas foram usadas
+conforme a seção 12 do enunciado do TP2.
+
+\end{document}
