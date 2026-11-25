@@ -3,6 +3,7 @@ package memory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -11,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-
 import memory.mode1.VariablePartitions;
 import memory.mode2.Buddy;
 import memory.mode3.Paging;
@@ -71,7 +71,7 @@ public class Main {
         String filePath = ask(options, "file",
                 "Arquivo de requisições: ",
                 Main::isReadableFile,
-                "arquivo não encontrado");
+                "arquivo não encontrado ou não é um arquivo comum");
 
         // 5) Execução passo a passo ou contínua
         boolean stepByStep;
@@ -92,7 +92,7 @@ public class Main {
     /** Laço principal: lê cada linha, executa e imprime resultado + estado. */
     private static void run(MemoryManager manager, int memorySize, Path file, boolean stepByStep)
             throws IOException {
-        List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+        List<String> lines = readLines(file);
         Simulator simulator = new Simulator(manager);
         Statistics statistics = new Statistics(memorySize); // ocupação máxima e fragmentação média
 
@@ -116,12 +116,15 @@ public class Main {
             if (command == null) {
                 System.out.println("  -> LINHA INVÁLIDA (ignorada)");
             } else {
-                // Executa o comando, mostra o resultado e o estado da memória
                 Result result = simulator.execute(command);
                 System.out.println("  -> " + result.formatted());
-                System.out.println(manager.state());
+            }
 
-                // Anota a memória depois desta linha para o resumo final
+            // Estado da memória a cada linha lida (seção 8), mesmo quando a linha é inválida
+            System.out.println(manager.state());
+
+            // Só comandos entram nas estatísticas; linha inválida não é um comando
+            if (command != null) {
                 statistics.record(manager.usedMemory(), manager.fragmentation());
             }
 
@@ -142,6 +145,26 @@ public class Main {
         System.out.println("Ocupação máxima:                " + statistics.formattedMaxOccupation());
         System.out.println("Fragmentação média:             "
                 + statistics.formattedAverageFragmentation(manager.fragmentationType()));
+    }
+
+    /**
+     * Lê todas as linhas do arquivo. Tenta UTF-8; se o arquivo foi salvo em outra
+     * codificação (ex.: ANSI do Bloco de Notas, com acentos), tenta Latin-1.
+     * Qualquer outra falha de leitura encerra com uma mensagem curta.
+     */
+    private static List<String> readLines(Path file) {
+        try {
+            return Files.readAllLines(file, StandardCharsets.UTF_8);
+        } catch (MalformedInputException e) {
+            try {
+                return Files.readAllLines(file, StandardCharsets.ISO_8859_1);
+            } catch (IOException e2) {
+                fatal("não foi possível ler o arquivo: " + file);
+            }
+        } catch (IOException e) {
+            fatal("não foi possível ler o arquivo: " + file);
+        }
+        return List.of(); // não chega aqui: fatal() encerra o programa
     }
 
     // ------------------------------------------------------------------
@@ -211,9 +234,11 @@ public class Main {
         }
     }
 
+    /** Só aceita arquivo comum e legível (uma pasta passava em isReadable sozinho). */
     private static boolean isReadableFile(String value) {
         try {
-            return Files.isReadable(Path.of(value));
+            Path path = Path.of(value);
+            return Files.isRegularFile(path) && Files.isReadable(path);
         } catch (InvalidPathException e) {
             return false; // caminho com caracteres inválidos
         }

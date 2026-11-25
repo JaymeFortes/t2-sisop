@@ -64,7 +64,8 @@ public class Simulator {
         if (size == null) {
             return Result.error(Result.PROCESS_NOT_FOUND);
         }
-        if (address >= size) { // endereços válidos: 0 .. size-1
+        // Endereços lógicos válidos: 0 .. size-1 (negativo também é inválido)
+        if (address < 0 || address >= size) {
             return Result.error(Result.INVALID_ADDRESS);
         }
         return manager.acc(id, address);

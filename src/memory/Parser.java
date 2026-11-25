@@ -14,12 +14,18 @@ public final class Parser {
             "^IN\\(\\s*(\\w+)\\s*,\\s*(\\d+)\\s*\\)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern OUT_PATTERN = Pattern.compile(
             "^OUT\\(\\s*(\\w+)\\s*\\)$", Pattern.CASE_INSENSITIVE);
+    // ACC aceita sinal: endereço negativo é comando bem formado com endereço inválido,
+    // e quem responde ENDEREÇO INVÁLIDO é o Simulator
     private static final Pattern ACC_PATTERN = Pattern.compile(
-            "^ACC\\(\\s*(\\w+)\\s*,\\s*(\\d+)\\s*\\)$", Pattern.CASE_INSENSITIVE);
+            "^ACC\\(\\s*(\\w+)\\s*,\\s*(-?\\d+)\\s*\\)$", Pattern.CASE_INSENSITIVE);
 
     // Classe utilitária: não faz sentido criar objetos dela
     private Parser() {}
 
+    /**
+     * @param line linha do arquivo (já sem espaços nas pontas)
+     * @return o comando reconhecido, ou null se a linha for inválida
+     */
     public static Command parse(String line) {
         try {
             Matcher m = IN_PATTERN.matcher(line);

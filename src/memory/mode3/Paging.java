@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import memory.MemoryManager;
 import memory.Result;
 
@@ -32,6 +31,9 @@ public class Paging implements MemoryManager {
 
     /** Processo do comando da linha atual (avisado pelo Simulator), para mostrar a tabela dele. */
     private String lastInvolved;
+
+    /** Processo liberado nesta linha, para o estado mostrar "Tabela X: liberada". */
+    private String lastReleased;
 
     public Paging(int memorySize, int pageSize) {
         this.memorySize = memorySize;
@@ -105,6 +107,7 @@ public class Paging implements MemoryManager {
             frames[frame] = null;
         }
         sizes.remove(id);
+        lastReleased = id;
         return Result.ok(id + " liberado: frame" + (table.size() > 1 ? "s " : " ")
                 + joinNumbers(table, ", "));
     }
@@ -118,7 +121,7 @@ public class Paging implements MemoryManager {
         return true; // só o modo 3 aceita ACC
     }
 
-    /** O Simulator já garantiu que o processo existe e que address < tamanho. */
+    /** O Simulator já garantiu que o processo existe e que 0 <= address < tamanho. */
     @Override
     public Result acc(String id, int address) {
         int page = address / pageSize;
@@ -143,8 +146,9 @@ public class Paging implements MemoryManager {
     /**
      * Mostra os frames, os livres, a tabela do processo envolvido na linha
      * (se ele estiver na memória, inclusive quando a linha deu erro, como um
-     * ACC com endereço inválido) e a fragmentação interna total.
-     * Depois de impressa, a referência é limpa para não vazar para a próxima linha.
+     * ACC com endereço inválido; ou "liberada", se ele acabou de sair) e a
+     * fragmentação interna total. Depois de impressas, as referências são
+     * limpas para não vazar para a próxima linha.
      */
     @Override
     public String state() {
@@ -164,7 +168,7 @@ public class Paging implements MemoryManager {
         text.append("  Frames:  ").append(String.join(" ", map)).append("\n");
         text.append("  Livres:  ").append(freeText).append("   (").append(freeCount).append(")\n");
 
-        // Tabela de páginas do processo envolvido (se ele ainda estiver na memória)
+        // Tabela de páginas do processo envolvido
         if (lastInvolved != null && pageTables.containsKey(lastInvolved)) {
             List<Integer> table = pageTables.get(lastInvolved);
             List<String> entries = new ArrayList<>();
@@ -173,8 +177,12 @@ public class Paging implements MemoryManager {
             }
             text.append("  Tabela ").append(lastInvolved).append(": ")
                 .append(String.join("  ", entries)).append("\n");
+        } else if (lastInvolved != null && lastInvolved.equals(lastReleased)) {
+            // O processo acabou de sair: a tabela dele deixou de existir
+            text.append("  Tabela ").append(lastInvolved).append(": liberada\n");
         }
         lastInvolved = null;
+        lastReleased = null;
 
         text.append("  Frag. interna total: ").append(internalFragmentation);
         return text.toString();
