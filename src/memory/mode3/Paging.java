@@ -12,7 +12,7 @@ import memory.Result;
  *
  * A memória é dividida em frames de tamanho fixo (= tamanho da página).
  * Cada processo é dividido em páginas e ganha uma tabela de páginas
- * (página -> frame). Só é admitido se TODAS as páginas couberem.
+ * (página -> frame). Só é admitido se todas as páginas couberem.
  */
 public class Paging implements MemoryManager {
 
@@ -20,19 +20,16 @@ public class Paging implements MemoryManager {
     private final int pageSize;
     private final int frameCount;
 
-    /** frames[i] = id do processo dono do frame i, ou null se livre. */
     private final String[] frames;
 
     /** Tabela de páginas de cada processo: posição = nº da página, valor = nº do frame. */
     private final Map<String, List<Integer>> pageTables = new HashMap<>();
 
-    /** Tamanho pedido por cada processo (para a fragmentação interna). */
+    /** Tamanho pedido por cada processo */
     private final Map<String, Integer> sizes = new HashMap<>();
 
-    /** Processo do comando da linha atual (avisado pelo Simulator), para mostrar a tabela dele. */
     private String lastInvolved;
 
-    /** Processo liberado nesta linha, para o estado mostrar "Tabela X: liberada". */
     private String lastReleased;
 
     public Paging(int memorySize, int pageSize) {
@@ -47,28 +44,21 @@ public class Paging implements MemoryManager {
         return "Paginação simples (página " + pageSize + ", " + frameCount + " frames)";
     }
 
-    // ------------------------------------------------------------------
-    // IN
-    // ------------------------------------------------------------------
-
     @Override
     public Result in(String id, int size) {
-        // Maior que a memória inteira nunca cabe. Testar antes da conta evita
-        // estouro de int em (size + pageSize - 1) com tamanhos enormes.
+    
         if (size > memorySize) {
             return Result.error(Result.NO_SPACE);
         }
 
-        // Nº de páginas = teto(size / pageSize), feito só com inteiros
         int pagesNeeded = (size + pageSize - 1) / pageSize;
 
-        // Sem memória virtual: precisa haver frame livre para TODAS as páginas
         List<Integer> freeFrames = freeFrames();
         if (freeFrames.size() < pagesNeeded) {
             return Result.error(Result.NO_SPACE);
         }
 
-        // Ocupa os frames livres de menor índice (não precisam ser contíguos)
+        // Ocupa os frames livres de menor índice
         List<Integer> table = new ArrayList<>();
         for (int page = 0; page < pagesNeeded; page++) {
             int frame = freeFrames.get(page);
@@ -82,7 +72,7 @@ public class Paging implements MemoryManager {
                 + " -> frame" + (pagesNeeded > 1 ? "s " : " ") + joinNumbers(table, ", "));
     }
 
-    /** Índices dos frames livres, em ordem crescente. */
+    /** Índices dos frames livres */
     private List<Integer> freeFrames() {
         List<Integer> free = new ArrayList<>();
         for (int i = 0; i < frameCount; i++) {
@@ -92,10 +82,6 @@ public class Paging implements MemoryManager {
         }
         return free;
     }
-
-    // ------------------------------------------------------------------
-    // OUT
-    // ------------------------------------------------------------------
 
     @Override
     public Result out(String id) {
@@ -111,10 +97,6 @@ public class Paging implements MemoryManager {
         return Result.ok(id + " liberado: frame" + (table.size() > 1 ? "s " : " ")
                 + joinNumbers(table, ", "));
     }
-
-    // ------------------------------------------------------------------
-    // ACC
-    // ------------------------------------------------------------------
 
     @Override
     public boolean supportsAcc() {
@@ -132,10 +114,6 @@ public class Paging implements MemoryManager {
         return Result.ok(id + " end. lógico " + address + " = página " + page
                 + ", desloc. " + offset + " -> frame " + frame + " -> físico " + physical);
     }
-
-    // ------------------------------------------------------------------
-    // Estado
-    // ------------------------------------------------------------------
 
     /** O Simulator avisa qual processo está envolvido em cada linha, mesmo quando a linha dá erro. */
     @Override
@@ -178,7 +156,6 @@ public class Paging implements MemoryManager {
             text.append("  Tabela ").append(lastInvolved).append(": ")
                 .append(String.join("  ", entries)).append("\n");
         } else if (lastInvolved != null && lastInvolved.equals(lastReleased)) {
-            // O processo acabou de sair: a tabela dele deixou de existir
             text.append("  Tabela ").append(lastInvolved).append(": liberada\n");
         }
         lastInvolved = null;
@@ -188,7 +165,7 @@ public class Paging implements MemoryManager {
         return text.toString();
     }
 
-    /** Frames ocupados x tamanho da página (o frame inteiro conta, mesmo com sobra). */
+    /** Frames ocupados x tamanho da página */
     @Override
     public int usedMemory() {
         return (frameCount - freeFrames().size()) * pageSize;

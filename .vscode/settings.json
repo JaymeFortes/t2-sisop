@@ -1,6 +1,0 @@
-{
-    "java.server.launchMode": "Standard",
-    "java.autobuild.enabled": true,
-    "java.project.sourcePaths": ["src"],
-    "java.project.outputPath": "out"
-}

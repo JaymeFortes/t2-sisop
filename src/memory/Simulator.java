@@ -10,7 +10,7 @@ import java.util.Map;
 public class Simulator {
 
     private final MemoryManager manager;
-    private final Map<String, Integer> processes = new HashMap<>(); // id -> tamanho pedido
+    private final Map<String, Integer> processes = new HashMap<>(); // id: tamanho
 
     private int admitted;
     private int rejected;
@@ -20,8 +20,6 @@ public class Simulator {
     }
 
     public Result execute(Command command) {
-        // Avisa o modo qual processo está envolvido, antes de qualquer validação.
-        // O modo 3 usa isso para mostrar a tabela de páginas mesmo quando a linha dá erro.
         manager.setInvolved(command.id());
 
         return switch (command.type()) {
@@ -40,7 +38,7 @@ public class Simulator {
             processes.put(id, size);
             admitted++;
         } else if (Result.NO_SPACE.equals(result.message())) {
-            rejected++; // rejeitado NÃO entra: um OUT depois dá "não encontrado"
+            rejected++; 
         }
         return result;
     }
@@ -64,7 +62,6 @@ public class Simulator {
         if (size == null) {
             return Result.error(Result.PROCESS_NOT_FOUND);
         }
-        // Endereços lógicos válidos: 0 .. size-1 (negativo também é inválido)
         if (address < 0 || address >= size) {
             return Result.error(Result.INVALID_ADDRESS);
         }

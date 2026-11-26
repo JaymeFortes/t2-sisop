@@ -7,26 +7,26 @@ import memory.MemoryManager;
 import memory.Result;
 
 /**
- * Modo 2 — Sistema buddy.
- *
- * A memória é uma árvore binária: a raiz é a memória inteira; um nó dividido
- * tem dois filhos com metade do tamanho cada (os "buddies"). Só as folhas são
- * blocos de verdade, e cada folha está livre ou alocada para um processo.
- *
- * IN:  arredonda o pedido para potência de 2, pega o menor bloco livre que caiba
- *      e divide ao meio até chegar no tamanho; aloca sempre a metade da esquerda.
- * OUT: libera o bloco e funde com o buddy enquanto o buddy também estiver livre.
- */
+  //Modo 2 — Sistema buddy.
+ 
+  A memória é uma árvore binária: a raiz é a memória inteira; um nó dividido
+  tem dois filhos com metade do tamanho cada (os "buddies"). Só as folhas são
+  blocos de verdade, e cada folha está livre ou alocada para um processo.
+ 
+  IN:  arredonda o pedido para potência de 2, pega o menor bloco livre que caiba
+       e divide ao meio até chegar no tamanho; aloca sempre a metade da esquerda.
+ OUT: libera o bloco e funde com o buddy enquanto o buddy também estiver livre.
+**/
 public class Buddy implements MemoryManager {
 
     /** Um nó da árvore. Dividido = tem filhos; folha = livre (id null) ou alocada. */
     private static class Node {
         final int start;
         final int size;
-        Node left;       // filho da esquerda (metade de menor endereço)
-        Node right;      // filho da direita
-        String id;       // processo dono (só em folha alocada)
-        int requested;   // tamanho que o processo pediu (para a fragmentação interna)
+        Node left;       
+        Node right;      
+        String id;       
+        int requested;  
 
         Node(int start, int size) {
             this.start = start;
@@ -37,7 +37,6 @@ public class Buddy implements MemoryManager {
 
         boolean isFreeLeaf() { return !isSplit() && id == null; }
 
-        /** Último endereço do bloco (inclusive). */
         int end() { return start + size - 1; }
     }
 
@@ -46,7 +45,7 @@ public class Buddy implements MemoryManager {
 
     public Buddy(int memorySize) {
         this.memorySize = memorySize;
-        this.root = new Node(0, memorySize); // começa como um único bloco livre
+        this.root = new Node(0, memorySize);
     }
 
     @Override
@@ -54,14 +53,10 @@ public class Buddy implements MemoryManager {
         return "Sistema buddy";
     }
 
-    // ------------------------------------------------------------------
-    // IN
-    // ------------------------------------------------------------------
-
     @Override
     public Result in(String id, int size) {
         if (size > memorySize) {
-            return Result.error(Result.NO_SPACE); // nem a memória inteira comporta
+            return Result.error(Result.NO_SPACE);
         }
         int blockSize = nextPowerOfTwo(size);
 
@@ -84,7 +79,6 @@ public class Buddy implements MemoryManager {
                 + "] (bloco " + node.size + ", pedido " + size + ")");
     }
 
-    /** Menor potência de 2 maior ou igual a n (5 -> 8, 16 -> 16, 20 -> 32). */
     private static int nextPowerOfTwo(int n) {
         int p = 1;
         while (p < n) {
@@ -94,7 +88,7 @@ public class Buddy implements MemoryManager {
     }
 
     /**
-     * Procura, entre as folhas livres, a MENOR que comporte blockSize.
+     * Procura, entre as folhas livres, a menor que comporte blockSize.
      * Percorre da esquerda para a direita (ordem de endereço); em empate
      * fica a primeira encontrada, ou seja, a de menor endereço ("<" estrito).
      */
@@ -110,15 +104,11 @@ public class Buddy implements MemoryManager {
         return best;
     }
 
-    // ------------------------------------------------------------------
-    // OUT
-    // ------------------------------------------------------------------
-
     @Override
     public Result out(String id) {
         Node leaf = findAllocated(root, id);
         if (leaf == null) {
-            return Result.error(Result.PROCESS_NOT_FOUND); // o Simulator já evita isso
+            return Result.error(Result.PROCESS_NOT_FOUND);
         }
         String message = id + " liberado de [" + leaf.start + "-" + leaf.end()
                 + "] (bloco " + leaf.size + ")";
@@ -135,7 +125,6 @@ public class Buddy implements MemoryManager {
         return Result.ok(message);
     }
 
-    /** Folha alocada para o processo, ou null. */
     private Node findAllocated(Node node, String id) {
         if (node.isSplit()) {
             Node found = findAllocated(node.left, id);
@@ -161,17 +150,13 @@ public class Buddy implements MemoryManager {
         }
     }
 
-    /** Folha que contém o endereço. */
+    //Folha que contém o endereço. 
     private Node leafContaining(Node node, int address) {
         while (node.isSplit()) {
             node = (address < node.right.start) ? node.left : node.right;
         }
         return node;
     }
-
-    // ------------------------------------------------------------------
-    // Estado
-    // ------------------------------------------------------------------
 
     @Override
     public String state() {
@@ -202,7 +187,7 @@ public class Buddy implements MemoryManager {
              + "  Frag. interna total: " + internalFragmentation;
     }
 
-    /** Soma dos blocos alocados (o bloco inteiro, incluindo a sobra interna). */
+    /** Soma dos blocos alocados. */
     @Override
     public int usedMemory() {
         List<Node> leaves = new ArrayList<>();

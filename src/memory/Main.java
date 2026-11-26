@@ -16,18 +16,8 @@ import memory.mode1.VariablePartitions;
 import memory.mode2.Buddy;
 import memory.mode3.Paging;
 
-/**
- * Ponto de entrada do simulador.
- *
- * Uso:
- *   java -cp out memory.Main [arquivo] [--mode 1|2|3] [--mem N]
- *        [--policy worst|circular] [--page N] [--step | --continuous]
- *
- * Qualquer parâmetro que não vier por argumento é perguntado no terminal.
- */
 public class Main {
 
-    /** Um único leitor do teclado, usado nas perguntas e no "Enter para continuar". */
     private static final BufferedReader INPUT =
             new BufferedReader(new InputStreamReader(System.in));
 
@@ -40,7 +30,7 @@ public class Main {
                 value -> value.matches("[123]"),
                 "o modo deve ser 1, 2 ou 3"));
 
-        // 2) Tamanho da memória (obrigatório, potência de 2)
+        // 2) Tamanho da memória
         int memorySize = Integer.parseInt(ask(options, "mem",
                 "Tamanho da memória (potência de 2): ",
                 Main::isPowerOfTwo,
@@ -99,7 +89,6 @@ public class Main {
         Simulator simulator = new Simulator(manager);
         Statistics statistics = new Statistics(memorySize); // ocupação máxima e fragmentação média
 
-        // Cabeçalho e estado inicial da memória
         System.out.println("=== Modo: " + manager.name() + " - memória " + memorySize + " ===");
         System.out.println("[00] início");
         System.out.println(manager.state());
@@ -108,13 +97,12 @@ public class Main {
         for (String raw : lines) {
             String line = raw.strip();
             if (line.isEmpty()) {
-                continue; // linha em branco: não conta na numeração
+                continue;
             }
             lineNumber++;
             System.out.println();
             System.out.printf("[%02d] %s%n", lineNumber, line);
 
-            // Transforma o texto em comando (IN/OUT/ACC + id + valor)
             Command command = Parser.parse(line);
             if (command == null) {
                 System.out.println("  -> LINHA INVÁLIDA (ignorada)");
@@ -123,10 +111,8 @@ public class Main {
                 System.out.println("  -> " + result.formatted());
             }
 
-            // Estado da memória a cada linha lida (seção 8), mesmo quando a linha é inválida
             System.out.println(manager.state());
 
-            // Só comandos entram nas estatísticas; linha inválida não é um comando
             if (command != null) {
                 statistics.record(manager.usedMemory(), manager.fragmentation());
             }
@@ -135,12 +121,12 @@ public class Main {
             if (stepByStep) {
                 System.out.print("  (Enter para continuar)");
                 if (INPUT.readLine() == null) {
-                    stepByStep = false; // entrada acabou (ex.: redirecionada): segue contínuo
+                    stepByStep = false; // entrada acabou
                 }
             }
         }
 
-        // Resumo final (seção 8 do enunciado)
+        // Resumo final
         System.out.println();
         System.out.println("=== RESUMO ===");
         System.out.println("Processos admitidos:            " + simulator.admitted());
@@ -150,11 +136,6 @@ public class Main {
                 + statistics.formattedAverageFragmentation(manager.fragmentationType()));
     }
 
-    /**
-     * Lê todas as linhas do arquivo. Tenta UTF-8; se o arquivo foi salvo em outra
-     * codificação (ex.: ANSI do Bloco de Notas, com acentos), tenta Latin-1.
-     * Qualquer outra falha de leitura encerra com uma mensagem curta.
-     */
     private static List<String> readLines(Path file) {
         try {
             return Files.readAllLines(file, StandardCharsets.UTF_8);
@@ -170,16 +151,6 @@ public class Main {
         return List.of(); // não chega aqui: fatal() encerra o programa
     }
 
-    // ------------------------------------------------------------------
-    // Leitura dos parâmetros
-    // ------------------------------------------------------------------
-
-    /**
-     * Separa os argumentos em um mapa:
-     *   "--mode 1"      -> mode = 1
-     *   "--step"        -> step = "" (flag sem valor)
-     *   "teste.txt"     -> file = teste.txt (argumento solto)
-     */
     private static Map<String, String> parseArgs(String[] args) {
         Map<String, String> options = new HashMap<>();
         for (int i = 0; i < args.length; i++) {
@@ -198,11 +169,6 @@ public class Main {
         return options;
     }
 
-    /**
-     * Devolve o valor do parâmetro. Se veio por argumento, só valida
-     * (inválido = encerra com erro). Se não veio, pergunta no terminal
-     * até receber um valor válido.
-     */
     private static String ask(Map<String, String> options, String key, String question,
                               Predicate<String> isValid, String errorMessage) throws IOException {
         String value = options.get(key);
@@ -227,7 +193,7 @@ public class Main {
         }
     }
 
-    /** Potência de 2: exatamente um bit ligado (8 = 1000, 8-1 = 0111, 8 & 7 = 0). */
+    // verifica se é potencia de 2
     static boolean isPowerOfTwo(String value) {
         try {
             int n = Integer.parseInt(value.strip());
@@ -237,7 +203,6 @@ public class Main {
         }
     }
 
-    /** Aceita caminhos explícitos e nomes curtos dos arquivos em tests/. */
     private static Path resolveRequestFile(String value) {
         Path path = Path.of(value);
         if (path.getRoot() != null || path.getParent() != null || Files.exists(path)) {
@@ -251,7 +216,7 @@ public class Main {
         return testFile;
     }
 
-    /** Só aceita arquivo comum e legível (uma pasta passava em isReadable sozinho). */
+    // verifica se é um arquivo legível
     private static boolean isReadableFile(String value) {
         try {
             Path path = resolveRequestFile(value);

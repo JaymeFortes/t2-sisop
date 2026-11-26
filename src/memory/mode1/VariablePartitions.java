@@ -6,17 +6,15 @@ import java.util.List;
 import memory.MemoryManager;
 import memory.Result;
 
-/**
- * Modo 1 — Partições variáveis.
- * A memória é uma lista de blocos contíguos, em ordem de endereço.
- * Cada IN corta um bloco livre no tamanho exato; cada OUT libera e funde vizinhos livres.
+
+//Modo 1 — Partições variáveis.
+ //A memória é uma lista de blocos contíguos, em ordem de endereço.
+ //Cada IN corta um bloco livre no tamanho exato; cada OUT libera e funde vizinhos livres.
  */
 public class VariablePartitions implements MemoryManager {
 
-    /** Política de escolha do bloco livre. */
     public enum Policy { WORST_FIT, CIRCULAR_FIT }
 
-    /** Um pedaço contíguo da memória: livre (id == null) ou ocupado por um processo. */
     private static class Block {
         int start;
         int size;
@@ -30,7 +28,6 @@ public class VariablePartitions implements MemoryManager {
 
         boolean isFree() { return id == null; }
 
-        /** Último endereço do bloco (inclusive). */
         int end() { return start + size - 1; }
     }
 
@@ -38,7 +35,7 @@ public class VariablePartitions implements MemoryManager {
     private final Policy policy;
     private final List<Block> blocks = new ArrayList<>(); // sempre ordenada por endereço
 
-    /** Circular-Fit: endereço logo após a última partição alocada. Começa em 0. */
+    //Circular-Fit: endereço logo após a última partição alocada. Começa em 0.
     private int pointer = 0;
 
     public VariablePartitions(int memorySize, Policy policy) {
@@ -62,7 +59,6 @@ public class VariablePartitions implements MemoryManager {
         Block chosen = blocks.get(index);
         int leftover = chosen.size - size;
 
-        // A partição fica no início do bloco escolhido
         chosen.id = id;
         chosen.size = size;
 
@@ -80,11 +76,8 @@ public class VariablePartitions implements MemoryManager {
         return Result.ok(id + " alocado em [" + chosen.start + "-" + chosen.end() + "] (" + size + ")");
     }
 
-    /**
-     * Worst-Fit: o MAIOR bloco livre que comporte o processo.
-     * Empate: fica o de menor endereço (o primeiro encontrado, por isso o ">" estrito).
-     * @return índice do bloco na lista, ou -1 se nenhum couber
-     */
+    // Worst-Fit: o MAIOR bloco livre que comporte o processo.
+    // Empate: fica o de menor endereço (o primeiro encontrado, por isso o ">" estrito).
     private int findWorstFit(int size) {
         int best = -1;
         for (int i = 0; i < blocks.size(); i++) {
@@ -97,16 +90,13 @@ public class VariablePartitions implements MemoryManager {
         return best;
     }
 
-    /**
-     * Circular-Fit: começa no primeiro bloco com início >= ponteiro e segue em ordem
-     * de endereço; ao chegar no fim, volta ao começo da lista. Fica com o PRIMEIRO que couber.
-     * A busca é circular, a memória não: blocos do fim e do início nunca se juntam.
-     * @return índice do bloco na lista, ou -1 se nenhum couber
-     */
+    // Circular-Fit: começa no primeiro bloco com início >= ponteiro e segue em ordem
+    // de endereço; ao chegar no fim, volta ao começo da lista. Fica com o PRIMEIRO que couber.
+    // A busca é circular, a memória não: blocos do fim e do início nunca se juntam.    
     private int findCircularFit(int size) {
         int n = blocks.size();
 
-        // Onde a busca começa: primeiro bloco com início >= ponteiro (ou o 0, se não houver)
+        // Onde a busca começa: primeiro bloco com início >= ponteiro
         int startIndex = 0;
         for (int i = 0; i < n; i++) {
             if (blocks.get(i).start >= pointer) {
@@ -115,7 +105,6 @@ public class VariablePartitions implements MemoryManager {
             }
         }
 
-        // Percorre todos os blocos uma vez, dando a volta com o resto da divisão (%)
         for (int k = 0; k < n; k++) {
             int i = (startIndex + k) % n;
             Block b = blocks.get(i);
@@ -130,7 +119,7 @@ public class VariablePartitions implements MemoryManager {
     public Result out(String id) {
         int index = indexOf(id);
         if (index < 0) {
-            return Result.error(Result.PROCESS_NOT_FOUND); // o Simulator já evita isso
+            return Result.error(Result.PROCESS_NOT_FOUND); 
         }
 
         Block block = blocks.get(index);
@@ -150,7 +139,6 @@ public class VariablePartitions implements MemoryManager {
         return Result.ok(message);
     }
 
-    /** Posição na lista do bloco ocupado pelo processo, ou -1. */
     private int indexOf(String id) {
         for (int i = 0; i < blocks.size(); i++) {
             if (id.equals(blocks.get(i).id)) {
@@ -160,7 +148,7 @@ public class VariablePartitions implements MemoryManager {
         return -1;
     }
 
-    /** Soma das partições ocupadas. */
+    // Soma das partições ocupadas.
     @Override
     public int usedMemory() {
         int used = 0;
@@ -172,12 +160,10 @@ public class VariablePartitions implements MemoryManager {
         return used;
     }
 
-    /**
-     * Fragmentação externa: memória livre que está FORA do maior bloco livre
-     * (total livre - maior bloco livre). É o espaço que existe mas está picado,
-     * sem servir para um processo do tamanho do total livre. Zero quando todo o
-     * espaço livre está num bloco só.
-     */
+    // Fragmentação externa: memória livre que está fora do maior bloco livre
+    // (total livre - maior bloco livre). 
+    // sem servir para um processo do tamanho do total livre. Zero quando todo o
+    // espaço livre está num bloco só.
     @Override
     public int fragmentation() {
         int totalFree = 0;
