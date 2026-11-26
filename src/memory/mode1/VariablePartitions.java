@@ -10,7 +10,6 @@ import memory.Result;
 //Modo 1 — Partições variáveis.
  //A memória é uma lista de blocos contíguos, em ordem de endereço.
  //Cada IN corta um bloco livre no tamanho exato; cada OUT libera e funde vizinhos livres.
- */
 public class VariablePartitions implements MemoryManager {
 
     public enum Policy { WORST_FIT, CIRCULAR_FIT }

@@ -5,7 +5,6 @@ import java.util.Locale;
 /**
  Acumula os números do resumo final que dependem da execução inteira:
  a ocupação máxima da memória e a fragmentação média.
- 
  */
 public class Statistics {
 
